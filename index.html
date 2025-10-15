@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>员工数据处理工具</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#165DFF',
+            success: '#36D399',
+            warning: '#FBBD23',
+            error: '#F87272',
+          },
+          fontFamily: {
+            inter: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        },
+      }
+    }
+  </script>
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+      .table-hover tr:hover {
+        @apply bg-gray-50;
+      }
+      .highlight-error {
+        @apply text-error font-medium;
+      }
+    }
+  </style>
+</head>
+<body class="font-inter bg-gray-50 p-4 md:p-8">
+  <div class="max-w-6xl mx-auto bg-white rounded-xl shadow-md p-6 md:p-8">
+    <header class="mb-8">
+      <h1 class="text-[clamp(1.8rem,4vw,2.5rem)] font-bold text-gray-800 mb-2">员工数据处理工具</h1>
+      <p class="text-gray-500">导入Excel表格，自动区分新老员工并按规则处理数据</p>
+    </header>
+
+    <!-- 上传表单区域 -->
+    <form id="uploadForm" class="mb-8 p-6 bg-gray-50 rounded-lg">
+      <div class="mb-6">
+        <label for="file" class="block text-gray-700 font-medium mb-2">
+          <i class="fa fa-file-excel-o mr-2 text-success"></i>上传Excel文件
+        </label>
+        <input type="file" id="file" accept=".xlsx,.xls" 
+               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+               required>
+        <p class="text-sm text-gray-500 mt-1">支持.xlsx和.xls格式，需包含"新老员工"等字段</p>
+      </div>
+
+      <!-- 老员工目标值设置 -->
+      <div class="mb-6 border-t pt-4">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">
+          <i class="fa fa-user-circle-o mr-2"></i>老员工目标值设置
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label for="satisfactionTarget" class="block text-gray-700 mb-1">满意度_剔除R目标值</label>
+            <input type="number" id="satisfactionTarget" value="83.5" step="0.1"
+                   class="w-full px-3 py-2 border border-gray-300 rounded">
+          </div>
+          <div>
+            <label for="resolutionTarget" class="block text-gray-700 mb-1">解决率_剔除R目标值</label>
+            <input type="number" id="resolutionTarget" value="70" step="0.1"
+                   class="w-full px-3 py-2 border border-gray-300 rounded">
+          </div>
+          <div>
+            <label for="sampleEvalTarget" class="block text-gray-700 mb-1">评价量_剔除R样本量目标</label>
+            <input type="number" id="sampleEvalTarget" value="8" min="1"
+                   class="w-full px-3 py-2 border border-gray-300 rounded">
+          </div>
+          <div>
+            <label for="sampleResTarget" class="block text-gray-700 mb-1">解决率总评价量_剔除R样本量目标</label>
+            <input type="number" id="sampleResTarget" value="8" min="1"
+                   class="w-full px-3 py-2 border border-gray-300 rounded">
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-lg font-medium transition-all flex items-center">
+        <i class="fa fa-cog mr-2"></i>处理数据
+      </button>
+    </form>
+
+    <!-- 结果展示区域 -->
+    <div id="result" class="hidden">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold text-gray-800">
+          <i class="fa fa-bar-chart mr-2"></i>处理结果
+        </h2>
+        <button id="downloadBtn" class="bg-success hover:bg-success/90 text-white px-4 py-2 rounded-lg font-medium transition-all flex items-center">
+          <i class="fa fa-download mr-2"></i>导出Excel
+        </button>
+      </div>
+
+      <!-- 老员工第一梯队 -->
+      <div class="mb-8">
+        <h3 class="text-lg font-semibold text-gray-800 mb-3">
+          <i class="fa fa-trophy mr-2 text-warning"></i>老员工第一梯队（符合所有目标）
+        </h3>
+        <div class="overflow-x-auto">
+          <table class="min-w-full border border-gray-200 rounded-lg table-hover">
+            <thead id="oldEliteHeader" class="bg-gray-100"></thead>
+            <tbody id="oldEliteBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 老员工未达标 -->
+      <div class="mb-8">
+        <h3 class="text-lg font-semibold text-gray-800 mb-3">
+          <i class="fa fa-exclamation-triangle mr-2 text-error"></i>老员工未达标人员
+        </h3>
+        <div class="overflow-x-auto">
+          <table class="min-w-full border border-gray-200 rounded-lg table-hover">
+            <thead id="oldNonEliteHeader" class="bg-gray-100"></thead>
+            <tbody id="oldNonEliteBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 新员工第一梯队 -->
+      <div class="mb-8">
+        <h3 class="text-lg font-semibold text-gray-800 mb-3">
+          <i class="fa fa-trophy mr-2 text-warning"></i>新员工第一梯队（影响值前100）
+        </h3>
+        <div class="overflow-x-auto">
+          <table class="min-w-full border border-gray-200 rounded-lg table-hover">
+            <thead id="newEliteHeader" class="bg-gray-100"></thead>
+            <tbody id="newEliteBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 新员工解决率未达标 -->
+      <div class="mb-4">
+        <h3 class="text-lg font-semibold text-gray-800 mb-3">
+          <i class="fa fa-exclamation-triangle mr-2 text-error"></i>新员工解决率未达标人员
+        </h3>
+        <div class="overflow-x-auto">
+          <table class="min-w-full border border-gray-200 rounded-lg table-hover">
+            <thead id="newNonResHeader" class="bg-gray-100"></thead>
+            <tbody id="newNonResBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
