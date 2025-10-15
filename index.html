@@ -1106,13 +1106,28 @@
             const thirdTierCount = parseInt(document.getElementById('newThirdTierCount').value);
             
             // 计算满意度影响值并排序
-            let staffWithImpact = processedNewStaff.map(staff => {
-                const impact = staff['满意度_剔除R'] - satisfactionTarget;
-                return {
-                    ...staff,
-                    满意度影响值: impact
-                };
-            }).sort((a, b) => b.满意度影响值 - a.满意度影响值); // 降序排序
+           // 先计算所有新员工的"评价量_剔除R"总和
+const totalEvaluationCount = processedNewStaff.reduce((sum, staff) => {
+    const evalCount = parseFloat(staff['评价量_剔除R']) || 0;
+    return sum + evalCount;
+}, 0);
+
+// 计算并添加满意度影响值，然后排序
+let staffWithImpact = processedNewStaff.map(staff => {
+    const satisfaction = parseFloat(staff['满意度_剔除R']) || 0;
+    const evalCount = parseFloat(staff['评价量_剔除R']) || 0;
+    
+    // 计算影响值（处理除以0的情况）
+    let impactValue = 0;
+    if (totalEvaluationCount > 0) {
+        impactValue = (satisfaction - satisfactionTarget) * (evalCount / totalEvaluationCount);
+    }
+    
+    return {
+        ...staff,
+        满意度影响值: parseFloat(impactValue.toFixed(6)) // 保留6位小数避免精度问题
+    };
+}).sort((a, b) => b.满意度影响值 - a.满意度影响值); // 按影响值降序排序
             
             // 确定梯队
             const totalStaff = staffWithImpact.length;
@@ -1586,16 +1601,16 @@
                     
                     // 格式化数值
                     if (typeof displayValue === 'number') {
+                        // 满意度影响值特殊处理：显示为数字格式，保留6位小数
+                        if (header === '满意度影响值') {
+                            displayValue = displayValue.toFixed(6);
+                        }
                         // 解决率总评价量_剔除R保持数字格式
-                        if (header === '解决率总评价量_剔除R') {
+                        else if (header === '解决率总评价量_剔除R') {
                             displayValue = displayValue.toFixed(0);
                         }
                         // 百分比字段（排除解决率总评价量_剔除R）
                         else if (header.includes('满意度') || header.includes('解决率')) {
-                            displayValue = (displayValue * 100).toFixed(1) + '%';
-                        }
-                        // 满意度影响值
-                        else if (header === '满意度影响值') {
                             displayValue = (displayValue * 100).toFixed(1) + '%';
                         }
                         // 其他数字保留两位小数
@@ -1713,16 +1728,16 @@
                     let value = baseFields[key];
                     
                     if (typeof value === 'number') {
+                        // 满意度影响值特殊处理：显示为数字格式，保留6位小数
+                        if (key === '满意度影响值') {
+                            formattedFields[key] = value.toFixed(6);
+                        }
                         // 解决率总评价量_剔除R保持数字格式
-                        if (key === '解决率总评价量_剔除R') {
+                        else if (key === '解决率总评价量_剔除R') {
                             formattedFields[key] = value.toFixed(0);
                         }
                         // 百分比字段（排除解决率总评价量_剔除R）
                         else if (key.includes('满意度') || key.includes('解决率')) {
-                            formattedFields[key] = (value * 100).toFixed(1) + '%';
-                        }
-                        // 满意度影响值
-                        else if (key === '满意度影响值') {
                             formattedFields[key] = (value * 100).toFixed(1) + '%';
                         }
                         // 分值字段
