@@ -1,162 +1,1847 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>员工数据处理工具</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            primary: '#165DFF',
-            success: '#36D399',
-            warning: '#FBBD23',
-            error: '#F87272',
-          },
-          fontFamily: {
-            inter: ['Inter', 'system-ui', 'sans-serif'],
-          },
-        },
-      }
-    }
-  </script>
-  <style type="text/tailwindcss">
-    @layer utilities {
-      .content-auto {
-        content-visibility: auto;
-      }
-      .table-hover tr:hover {
-        @apply bg-gray-50;
-      }
-      .highlight-error {
-        @apply text-error font-medium;
-      }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>客服数据处理系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#10B981',
+                        warning: '#F59E0B',
+                        danger: '#EF4444',
+                        dark: '#1E293B',
+                        light: '#F8FAFC'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .transition-height {
+                transition: max-height 0.3s ease;
+            }
+            .table-shadow {
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            }
+            .highlight-cell {
+                @apply bg-danger/10 border-l-4 border-danger font-medium;
+            }
+            .first-tier {
+                @apply bg-secondary/10 border-l-4 border-secondary;
+            }
+            .second-tier {
+                @apply bg-warning/10 border-l-4 border-warning;
+            }
+            .third-tier {
+                @apply bg-danger/10 border-l-4 border-danger;
+            }
+            .pagination-btn {
+                @apply px-3 py-1 border border-gray-300 rounded hover:bg-gray-100 transition-colors;
+            }
+            .pagination-btn.active {
+                @apply bg-primary text-white border-primary;
+            }
+            .floating-btn {
+                @apply fixed z-40 p-4 rounded-full shadow-lg transition-all duration-300 hover:scale-110 focus:outline-none;
+            }
+        }
+    </style>
 </head>
-<body class="font-inter bg-gray-50 p-4 md:p-8">
-  <div class="max-w-6xl mx-auto bg-white rounded-xl shadow-md p-6 md:p-8">
-    <header class="mb-8">
-      <h1 class="text-[clamp(1.8rem,4vw,2.5rem)] font-bold text-gray-800 mb-2">员工数据处理工具</h1>
-      <p class="text-gray-500">导入Excel表格，自动区分新老员工并按规则处理数据</p>
+<body class="bg-gray-50 font-sans text-dark">
+    <!-- 悬浮跳转按钮 -->
+    <button id="floatingJumpBtn" class="floating-btn right-6 top-1/2 -translate-y-1/2 bg-purple-500 text-white">
+        <i class="fa fa-exchange text-xl"></i>
+    </button>
+
+    <!-- 顶部导航栏 -->
+    <header class="bg-white shadow-md sticky top-0 z-30 transition-all duration-300">
+        <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-wrap items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <i class="fa fa-bar-chart text-primary text-2xl"></i>
+                <h1 class="text-xl md:text-2xl font-bold text-dark">客服数据处理系统</h1>
+            </div>
+            <div class="flex items-center space-x-4 mt-2 md:mt-0">
+                <button id="templateBtn" class="flex items-center px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition-all">
+                    <i class="fa fa-download mr-2"></i>
+                    <span>下载模板</span>
+                </button>
+                <button id="helpBtn" class="p-2 bg-gray-200 hover:bg-gray-300 rounded-full transition-all">
+                    <i class="fa fa-question-circle"></i>
+                </button>
+            </div>
+        </div>
     </header>
 
-    <!-- 上传表单区域 -->
-    <form id="uploadForm" class="mb-8 p-6 bg-gray-50 rounded-lg">
-      <div class="mb-6">
-        <label for="file" class="block text-gray-700 font-medium mb-2">
-          <i class="fa fa-file-excel-o mr-2 text-success"></i>上传Excel文件
-        </label>
-        <input type="file" id="file" accept=".xlsx,.xls" 
-               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
-               required>
-        <p class="text-sm text-gray-500 mt-1">支持.xlsx和.xls格式，需包含"新老员工"等字段</p>
-      </div>
+    <!-- 主内容区 -->
+    <main class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- 上传区域 -->
+        <section class="mb-10 bg-white rounded-xl shadow-lg p-6 transform transition-all hover:shadow-xl">
+            <h2 class="text-xl font-semibold mb-4 flex items-center">
+                <i class="fa fa-upload text-primary mr-2"></i>
+                导入Excel数据
+            </h2>
+            <div id="uploadArea" class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary transition-colors cursor-pointer">
+                <i class="fa fa-file-excel-o text-5xl text-gray-400 mb-4"></i>
+                <p class="text-gray-600 mb-2">拖拽Excel文件到此处，或点击上传</p>
+                <p class="text-gray-400 text-sm">支持 .xlsx 和 .xls 格式，需包含"新老员工"字段区分人员类型</p>
+                <input type="file" id="fileInput" accept=".xlsx,.xls" class="hidden" />
+                <button id="browseBtn" class="mt-4 px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all">
+                    选择文件
+                </button>
+            </div>
+            <div id="fileInfo" class="mt-4 hidden">
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center">
+                        <i class="fa fa-file-text-o text-primary mr-2"></i>
+                        <span id="fileName" class="truncate max-w-md"></span>
+                    </div>
+                    <button id="removeFileBtn" class="text-gray-500 hover:text-danger p-2 transition-colors">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
 
-      <!-- 老员工目标值设置 -->
-      <div class="mb-6 border-t pt-4">
-        <h2 class="text-xl font-semibold text-gray-800 mb-4">
-          <i class="fa fa-user-circle-o mr-2"></i>老员工目标值设置
-        </h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label for="satisfactionTarget" class="block text-gray-700 mb-1">满意度_剔除R目标值</label>
-            <input type="number" id="satisfactionTarget" value="83.5" step="0.1"
-                   class="w-full px-3 py-2 border border-gray-300 rounded">
-          </div>
-          <div>
-            <label for="resolutionTarget" class="block text-gray-700 mb-1">解决率_剔除R目标值</label>
-            <input type="number" id="resolutionTarget" value="70" step="0.1"
-                   class="w-full px-3 py-2 border border-gray-300 rounded">
-          </div>
-          <div>
-            <label for="sampleEvalTarget" class="block text-gray-700 mb-1">评价量_剔除R样本量目标</label>
-            <input type="number" id="sampleEvalTarget" value="8" min="1"
-                   class="w-full px-3 py-2 border border-gray-300 rounded">
-          </div>
-          <div>
-            <label for="sampleResTarget" class="block text-gray-700 mb-1">解决率总评价量_剔除R样本量目标</label>
-            <input type="number" id="sampleResTarget" value="8" min="1"
-                   class="w-full px-3 py-2 border border-gray-300 rounded">
-          </div>
+        <!-- 处理结果区域 -->
+        <section id="resultsSection" class="hidden">
+            <!-- 数据概览 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div class="bg-white rounded-lg shadow p-4 transform transition-all hover:shadow-md">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-gray-500 text-sm">总记录数</p>
+                            <p id="totalRecords" class="text-2xl font-bold mt-1">0</p>
+                        </div>
+                        <div class="p-2 bg-primary/10 rounded-lg">
+                            <i class="fa fa-users text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4 transform transition-all hover:shadow-md">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-gray-500 text-sm">老员工数</p>
+                            <p id="oldStaffCount" class="text-2xl font-bold mt-1">0</p>
+                        </div>
+                        <div class="p-2 bg-blue-100 rounded-lg">
+                            <i class="fa fa-user text-blue-500"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4 transform transition-all hover:shadow-md">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-gray-500 text-sm">新员工数</p>
+                            <p id="newStaffCount" class="text-2xl font-bold mt-1">0</p>
+                        </div>
+                        <div class="p-2 bg-green-100 rounded-lg">
+                            <i class="fa fa-user-plus text-green-500"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-4 transform transition-all hover:shadow-md">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-gray-500 text-sm">第一梯队数</p>
+                            <p id="firstTierCount" class="text-2xl font-bold mt-1">0</p>
+                        </div>
+                        <div class="p-2 bg-secondary/10 rounded-lg">
+                            <i class="fa fa-trophy text-secondary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 功能按钮区域 -->
+            <div class="mb-6 flex flex-wrap gap-4 justify-center">
+                <button id="jumpBtn" class="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-all shadow flex items-center">
+                    <i class="fa fa-exchange mr-2"></i>
+                    <span>跳转至新员工数据</span>
+                </button>
+                <button id="exportOldBtn" class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all shadow flex items-center">
+                    <i class="fa fa-download mr-2"></i>
+                    <span>导出老员工Excel</span>
+                </button>
+                <button id="exportNewBtn" class="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all shadow flex items-center">
+                    <i class="fa fa-download mr-2"></i>
+                    <span>导出新员工Excel</span>
+                </button>
+                <button id="exportOldImageBtn" class="px-6 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-all shadow flex items-center">
+                    <i class="fa fa-picture-o mr-2"></i>
+                    <span>导出老员工图片</span>
+                </button>
+                <button id="exportNewImageBtn" class="px-6 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-all shadow flex items-center">
+                    <i class="fa fa-picture-o mr-2"></i>
+                    <span>导出新员工图片</span>
+                </button>
+            </div>
+
+            <!-- 老员工处理 -->
+            <div id="oldStaffSection" class="mb-8 bg-white rounded-xl shadow-lg overflow-hidden">
+                <div class="p-6 border-b border-gray-100">
+                    <h2 class="text-xl font-semibold flex items-center">
+                        <i class="fa fa-user text-blue-500 mr-2"></i>
+                        老员工数据处理
+                    </h2>
+                </div>
+                
+                <!-- 老员工搜索和筛选 -->
+                <div class="p-6 bg-gray-50 border-b border-gray-100">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">搜索 (ERP账号/姓名)</label>
+                            <div class="relative">
+                                <input type="text" id="oldStaffSearch" placeholder="输入ERP账号或姓名搜索..."
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 pl-10">
+                                <i class="fa fa-search absolute left-3 top-2.5 text-gray-400"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">部门筛选</label>
+                            <select id="oldDeptFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50">
+                                <option value="">全部部门</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">梯队筛选</label>
+                            <select id="oldTierFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50">
+                                <option value="">全部梯队</option>
+                                <option value="1">第一梯队</option>
+                                <option value="2">第二梯队</option>
+                                <option value="3">第三梯队</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 老员工计算方式选择 -->
+                <div class="p-6 bg-gray-50 border-b border-gray-100">
+                    <h3 class="font-medium mb-4">计算方式选择</h3>
+                    <div class="flex flex-wrap gap-4 mb-6">
+                        <button id="processByTargetBtn" class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all shadow flex items-center">
+                            <i class="fa fa-bullseye mr-2"></i>
+                            <span>按目标值计算</span>
+                        </button>
+                        <button id="processByScoreBtn" class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all shadow flex items-center">
+                            <i class="fa fa-star mr-2"></i>
+                            <span>按分值计算</span>
+                        </button>
+                    </div>
+                    
+                    <!-- 按目标值计算设置 -->
+                    <div id="targetSettings" class="mb-6">
+                        <h4 class="font-medium mb-4">目标值设置</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1">满意度_剔除R目标值</label>
+                                <div class="relative">
+                                    <input type="number" id="oldSatisfactionTarget" value="83.5" step="0.1" min="0" max="100" 
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 pr-10">
+                                    <span class="absolute right-3 top-2 text-gray-500">%</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1">解决率_剔除R目标值</label>
+                                <div class="relative">
+                                    <input type="number" id="oldResolutionTarget" value="70" step="0.1" min="0" max="100"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 pr-10">
+                                    <span class="absolute right-3 top-2 text-gray-500">%</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1">评价量_剔除R样本量目标值</label>
+                                <input type="number" id="oldEvaluationTarget" value="8" min="1"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1">解决率总评价量_剔除R样本量目标值</label>
+                                <input type="number" id="oldResolutionEvaluationTarget" value="8" min="1"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 按分值计算设置 -->
+                    <div id="scoreSettings" class="hidden">
+                        <h4 class="font-medium mb-4">分值设置</h4>
+                        
+                        <div class="mb-6">
+                            <h5 class="font-medium mb-3 text-blue-600">满意度_剔除R 分值范围</h5>
+                            <div id="satisfactionScoreRanges">
+                                <div class="score-range-item grid grid-cols-1 md:grid-cols-3 gap-4 mb-3 p-3 bg-gray-50 rounded">
+                                    <div>
+                                        <label class="block text-sm text-gray-600 mb-1">最小值 (%)</label>
+                                        <input type="number" class="min-value w-full px-3 py-2 border border-gray-300 rounded-lg" value="82" step="0.1" min="0" max="100">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm text-gray-600 mb-1">最大值 (%)</label>
+                                        <input type="number" class="max-value w-full px-3 py-2 border border-gray-300 rounded-lg" value="100" step="0.1" min="0" max="100">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm text-gray-600 mb-1">分值</label>
+                                        <input type="number" class="score w-full px-3 py-2 border border-gray-300 rounded-lg" value="1" min="1">
+                                    </div>
+                                </div>
+                                <div class="score-range-item grid grid-cols-1 md:grid-cols-3 gap-4 mb-3 p-3 bg-gray-50 rounded">
+                                    <div>
+                                        <label class="block text-sm text-gray-600 mb-1">最小值 (%)</label>
+                                        <input type="number" class="min-value w-full px-3 py-2 border border-gray-300 rounded-lg" value="77" step="0.1" min="0" max="100">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm text-gray-600 mb-1">最大值 (%)</label>
+                                        <input type="number" class="max-value w-full px-3 py-2 border border-gray-300 rounded-lg" value="82" step="0.1" min="0" max="100">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm text-gray-600 mb-1">分值</label>
+                                        <input type="number" class="score w-full px-3 py-2 border border-gray-300 rounded-lg" value="2" min="1">
+                                    </div>
+                                </div>
+                                <div class="score-range-item grid grid-cols-1 md:grid-cols-3 gap-4 mb-3 p-3 bg-gray-50 rounded">
+                                    <div>
+                                        <label class="block text-sm text-gray-600 mb-1">最小值 (%)</label>
+                                        <input type="number" class="min-value w-full px-3 py-2 border border-gray-300 rounded-lg" value="0" step="0.1" min="0" max="100">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm text-gray-600 mb-1">最大值 (%)</label>
+                                        <input type="number" class="max-value w-full px-3 py-2 border border-gray-300 rounded-lg" value="77" step="0.1" min="0" max="100">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm text-gray-600 mb-1">分值</label>
+                                        <input type="number" class="score w-full px-3 py-2 border border-gray-300 rounded-lg" value="3" min="1">
+                                    </div>
+                                </div>
+                            </div>
+                            <button id="addSatisfactionRange" class="mt-2 px-4 py-1 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm transition-all">
+                                <i class="fa fa-plus mr-1"></i> 添加范围
+                            </button>
+                        </div>
+                        
+                        <div>
+                            <h5 class="font-medium mb-3 text-green-600">解决率_剔除R 分值范围</h5>
+                            <div id="resolutionScoreRanges">
+                                <div class="score-range-item grid grid-cols-1 md:grid-cols-3 gap-4 mb-3 p-3 bg-gray-50 rounded">
+                                    <div>
+                                        <label class="block text-sm text-gray-600 mb-1">最小值 (%)</label>
+                                        <input type="number" class="min-value w-full px-3 py-2 border border-gray-300 rounded-lg" value="70" step="0.1" min="0" max="100">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm text-gray-600 mb-1">最大值 (%)</label>
+                                        <input type="number" class="max-value w-full px-3 py-2 border border-gray-300 rounded-lg" value="100" step="0.1" min="0" max="100">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm text-gray-600 mb-1">分值</label>
+                                        <input type="number" class="score w-full px-3 py-2 border border-gray-300 rounded-lg" value="1" min="1">
+                                    </div>
+                                </div>
+                                <div class="score-range-item grid grid-cols-1 md:grid-cols-3 gap-4 mb-3 p-3 bg-gray-50 rounded">
+                                    <div>
+                                        <label class="block text-sm text-gray-600 mb-1">最小值 (%)</label>
+                                        <input type="number" class="min-value w-full px-3 py-2 border border-gray-300 rounded-lg" value="62" step="0.1" min="0" max="100">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm text-gray-600 mb-1">最大值 (%)</label>
+                                        <input type="number" class="max-value w-full px-3 py-2 border border-gray-300 rounded-lg" value="70" step="0.1" min="0" max="100">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm text-gray-600 mb-1">分值</label>
+                                        <input type="number" class="score w-full px-3 py-2 border border-gray-300 rounded-lg" value="2" min="1">
+                                    </div>
+                                </div>
+                                <div class="score-range-item grid grid-cols-1 md:grid-cols-3 gap-4 mb-3 p-3 bg-gray-50 rounded">
+                                    <div>
+                                        <label class="block text-sm text-gray-600 mb-1">最小值 (%)</label>
+                                        <input type="number" class="min-value w-full px-3 py-2 border border-gray-300 rounded-lg" value="0" step="0.1" min="0" max="100">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm text-gray-600 mb-1">最大值 (%)</label>
+                                        <input type="number" class="max-value w-full px-3 py-2 border border-gray-300 rounded-lg" value="62" step="0.1" min="0" max="100">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm text-gray-600 mb-1">分值</label>
+                                        <input type="number" class="score w-full px-3 py-2 border border-gray-300 rounded-lg" value="3" min="1">
+                                    </div>
+                                </div>
+                            </div>
+                            <button id="addResolutionRange" class="mt-2 px-4 py-1 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm transition-all">
+                                <i class="fa fa-plus mr-1"></i> 添加范围
+                            </button>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <label class="block text-sm text-gray-600 mb-1">第二梯队评价量阈值</label>
+                            <input type="number" id="secondTierEvaluationThreshold" value="8" min="1"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50">
+                            <p class="text-xs text-gray-500 mt-1">评价量_剔除R或已解决量_剔除R任一值低于此值，均为第二梯队</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 老员工结果 -->
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-medium">处理结果</h3>
+                        <div class="text-sm text-gray-500">
+                            第一梯队: <span id="oldFirstTierCount" class="text-secondary font-medium">0</span> / 
+                            第二梯队: <span id="oldSecondTierCount" class="text-warning font-medium">0</span> / 
+                            第三梯队: <span id="oldThirdTierCount" class="text-danger font-medium">0</span>
+                            <span class="mx-1">|</span>
+                            总计: <span id="oldTotalCount" class="font-medium">0</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 分页控制 -->
+                    <div id="oldPagination" class="mb-4 flex flex-wrap items-center justify-between">
+                        <div class="text-sm text-gray-500 mb-2 md:mb-0">
+                            显示 <span id="oldStartRecord">0</span>-<span id="oldEndRecord">0</span> 条，共 <span id="oldTotalFiltered">0</span> 条
+                        </div>
+                        <div class="flex items-center space-x-1">
+                            <button id="oldPrevPage" class="pagination-btn" disabled>
+                                <i class="fa fa-chevron-left"></i>
+                            </button>
+                            <div id="oldPageNumbers" class="flex items-center space-x-1"></div>
+                            <button id="oldNextPage" class="pagination-btn" disabled>
+                                <i class="fa fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto table-shadow rounded-lg">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr id="oldStaffTableHeader"></tr>
+                            </thead>
+                            <tbody id="oldStaffTableBody" class="bg-white divide-y divide-gray-200"></tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- 表格底部分页 -->
+                    <div class="mt-4 flex flex-wrap items-center justify-between">
+                        <div class="text-sm text-gray-500 mb-2 md:mb-0">
+                            显示 <span id="oldStartRecordBottom">0</span>-<span id="oldEndRecordBottom">0</span> 条，共 <span id="oldTotalFilteredBottom">0</span> 条
+                        </div>
+                        <div class="flex items-center space-x-1">
+                            <button id="oldPrevPageBottom" class="pagination-btn" disabled>
+                                <i class="fa fa-chevron-left"></i>
+                            </button>
+                            <div id="oldPageNumbersBottom" class="flex items-center space-x-1"></div>
+                            <button id="oldNextPageBottom" class="pagination-btn" disabled>
+                                <i class="fa fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 新员工处理 -->
+            <div id="newStaffSection" class="mb-8 bg-white rounded-xl shadow-lg overflow-hidden">
+                <div class="p-6 border-b border-gray-100">
+                    <h2 class="text-xl font-semibold flex items-center">
+                        <i class="fa fa-user-plus text-green-500 mr-2"></i>
+                        新员工数据处理
+                    </h2>
+                </div>
+                
+                <!-- 新员工搜索和筛选 -->
+                <div class="p-6 bg-gray-50 border-b border-gray-100">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">搜索 (ERP账号/姓名)</label>
+                            <div class="relative">
+                                <input type="text" id="newStaffSearch" placeholder="输入ERP账号或姓名搜索..."
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 pl-10">
+                                <i class="fa fa-search absolute left-3 top-2.5 text-gray-400"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">部门筛选</label>
+                            <select id="newDeptFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50">
+                                <option value="">全部部门</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">梯队筛选</label>
+                            <select id="newTierFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50">
+                                <option value="">全部梯队</option>
+                                <option value="1">第一梯队</option>
+                                <option value="2">第二梯队</option>
+                                <option value="3">第三梯队</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 新员工目标值设置 -->
+                <div class="p-6 bg-gray-50 border-b border-gray-100">
+                    <h3 class="font-medium mb-4">目标值设置</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">满意度_剔除R目标值</label>
+                            <div class="relative">
+                                <input type="number" id="newSatisfactionTarget" value="83.5" step="0.1" min="0" max="100"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 pr-10">
+                                <span class="absolute right-3 top-2 text-gray-500">%</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">用于计算满意度影响值的基准值</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">解决率_剔除R目标值</label>
+                            <div class="relative">
+                                <input type="number" id="newResolutionTarget" value="70" step="0.1" min="0" max="100"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 pr-10">
+                                <span class="absolute right-3 top-2 text-gray-500">%</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">第一梯队人数</label>
+                            <input type="number" id="newFirstTierCount" value="100" min="1"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50">
+                            <p class="text-xs text-gray-500 mt-1">满意度影响值前N名为第一梯队</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">第三梯队人数</label>
+                            <input type="number" id="newThirdTierCount" value="50" min="1"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50">
+                            <p class="text-xs text-gray-500 mt-1">满意度影响值倒数N名为第三梯队</p>
+                        </div>
+                    </div>
+                    <button id="processNewStaffBtn" class="mt-4 px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all">
+                        <i class="fa fa-refresh mr-1"></i> 重新计算
+                    </button>
+                </div>
+                
+                <!-- 新员工结果 -->
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-medium">处理结果</h3>
+                        <div class="text-sm text-gray-500">
+                            第一梯队: <span id="newFirstTierCountDisplay" class="text-secondary font-medium">0</span> / 
+                            第二梯队: <span id="newSecondTierCount" class="text-warning font-medium">0</span> / 
+                            第三梯队: <span id="newThirdTierCountDisplay" class="text-danger font-medium">0</span>
+                            <span class="mx-1">|</span>
+                            总计: <span id="newTotalCount" class="font-medium">0</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 分页控制 -->
+                    <div id="newPagination" class="mb-4 flex flex-wrap items-center justify-between">
+                        <div class="text-sm text-gray-500 mb-2 md:mb-0">
+                            显示 <span id="newStartRecord">0</span>-<span id="newEndRecord">0</span> 条，共 <span id="newTotalFiltered">0</span> 条
+                        </div>
+                        <div class="flex items-center space-x-1">
+                            <button id="newPrevPage" class="pagination-btn" disabled>
+                                <i class="fa fa-chevron-left"></i>
+                            </button>
+                            <div id="newPageNumbers" class="flex items-center space-x-1"></div>
+                            <button id="newNextPage" class="pagination-btn" disabled>
+                                <i class="fa fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto table-shadow rounded-lg">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr id="newStaffTableHeader"></tr>
+                            </thead>
+                            <tbody id="newStaffTableBody" class="bg-white divide-y divide-gray-200"></tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- 表格底部分页 -->
+                    <div class="mt-4 flex flex-wrap items-center justify-between">
+                        <div class="text-sm text-gray-500 mb-2 md:mb-0">
+                            显示 <span id="newStartRecordBottom">0</span>-<span id="newEndRecordBottom">0</span> 条，共 <span id="newTotalFilteredBottom">0</span> 条
+                        </div>
+                        <div class="flex items-center space-x-1">
+                            <button id="newPrevPageBottom" class="pagination-btn" disabled>
+                                <i class="fa fa-chevron-left"></i>
+                            </button>
+                            <div id="newPageNumbersBottom" class="flex items-center space-x-1"></div>
+                            <button id="newNextPageBottom" class="pagination-btn" disabled>
+                                <i class="fa fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 帮助模态框 -->
+    <div id="helpModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+                <h3 class="text-xl font-semibold">使用帮助</h3>
+                <button id="closeHelpBtn" class="text-gray-500 hover:text-gray-700">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <h4 class="font-medium mb-2">1. 导入数据</h4>
+                <p class="text-gray-600 mb-4">点击"选择文件"按钮或拖拽Excel文件到上传区域，系统支持.xlsx和.xls格式文件。Excel必须包含"新老员工"字段用于区分人员类型，可填写"老员工"或"新员工"。满意度和解决率应为小数形式（如0.8835表示88.35%）。</p>
+                
+                <h4 class="font-medium mb-2">2. 数据查询与筛选</h4>
+                <ul class="text-gray-600 list-disc pl-5 mb-4">
+                    <li>可通过ERP账号或姓名搜索特定员工</li>
+                    <li>可通过部门筛选器筛选特定部门的员工数据</li>
+                    <li>可通过梯队筛选器筛选特定梯队的员工数据</li>
+                    <li>筛选后的数据会实时更新，导出功能也会只导出筛选后的数据</li>
+                </ul>
+                
+                <h4 class="font-medium mb-2">3. 老员工数据计算方式</h4>
+                <ul class="text-gray-600 list-disc pl-5 mb-4">
+                    <li><strong>按目标值计算</strong>：根据设定的目标值判断是否为第一梯队</li>
+                    <li><strong>按分值计算</strong>：根据分值范围计算总分值，再根据总分值划分梯队</li>
+                </ul>
+                
+                <h4 class="font-medium mb-2">4. 分页浏览</h4>
+                <p class="text-gray-600 mb-4">系统默认每页显示100条数据，可通过表格上方和下方的分页控件切换页码，方便浏览大量数据。</p>
+                
+                <h4 class="font-medium mb-2">5. 数据导出</h4>
+                <ul class="text-gray-600 list-disc pl-5 mb-4">
+                    <li>可将数据导出为Excel格式，包含完整数据</li>
+                    <li>可将所有筛选后的表格数据导出为图片格式，方便分享</li>
+                </ul>
+                
+                <h4 class="font-medium mb-2">6. 快速跳转</h4>
+                <p class="text-gray-600">点击顶部的"跳转至新员工数据"按钮或页面右侧的悬浮按钮，可在老员工和新员工数据区域之间快速切换。</p>
+            </div>
         </div>
-      </div>
-
-      <button type="submit" class="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-lg font-medium transition-all flex items-center">
-        <i class="fa fa-cog mr-2"></i>处理数据
-      </button>
-    </form>
-
-    <!-- 结果展示区域 -->
-    <div id="result" class="hidden">
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-xl font-semibold text-gray-800">
-          <i class="fa fa-bar-chart mr-2"></i>处理结果
-        </h2>
-        <button id="downloadBtn" class="bg-success hover:bg-success/90 text-white px-4 py-2 rounded-lg font-medium transition-all flex items-center">
-          <i class="fa fa-download mr-2"></i>导出Excel
-        </button>
-      </div>
-
-      <!-- 老员工第一梯队 -->
-      <div class="mb-8">
-        <h3 class="text-lg font-semibold text-gray-800 mb-3">
-          <i class="fa fa-trophy mr-2 text-warning"></i>老员工第一梯队（符合所有目标）
-        </h3>
-        <div class="overflow-x-auto">
-          <table class="min-w-full border border-gray-200 rounded-lg table-hover">
-            <thead id="oldEliteHeader" class="bg-gray-100"></thead>
-            <tbody id="oldEliteBody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- 老员工未达标 -->
-      <div class="mb-8">
-        <h3 class="text-lg font-semibold text-gray-800 mb-3">
-          <i class="fa fa-exclamation-triangle mr-2 text-error"></i>老员工未达标人员
-        </h3>
-        <div class="overflow-x-auto">
-          <table class="min-w-full border border-gray-200 rounded-lg table-hover">
-            <thead id="oldNonEliteHeader" class="bg-gray-100"></thead>
-            <tbody id="oldNonEliteBody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- 新员工第一梯队 -->
-      <div class="mb-8">
-        <h3 class="text-lg font-semibold text-gray-800 mb-3">
-          <i class="fa fa-trophy mr-2 text-warning"></i>新员工第一梯队（影响值前100）
-        </h3>
-        <div class="overflow-x-auto">
-          <table class="min-w-full border border-gray-200 rounded-lg table-hover">
-            <thead id="newEliteHeader" class="bg-gray-100"></thead>
-            <tbody id="newEliteBody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- 新员工解决率未达标 -->
-      <div class="mb-4">
-        <h3 class="text-lg font-semibold text-gray-800 mb-3">
-          <i class="fa fa-exclamation-triangle mr-2 text-error"></i>新员工解决率未达标人员
-        </h3>
-        <div class="overflow-x-auto">
-          <table class="min-w-full border border-gray-200 rounded-lg table-hover">
-            <thead id="newNonResHeader" class="bg-gray-100"></thead>
-            <tbody id="newNonResBody"></tbody>
-          </table>
-        </div>
-      </div>
     </div>
-  </div>
 
-  <script src="script.js"></script>
+    <!-- 临时图片导出容器 (隐藏) -->
+    <div id="imageExportContainer" class="hidden fixed top-0 left-0 z-50 bg-white p-8"></div>
+
+    <!-- 页脚 -->
+    <footer class="bg-dark text-white py-6">
+        <div class="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <p>客服数据处理系统 &copy; 2023</p>
+            <p class="text-gray-400 text-sm mt-1">本地运行，数据安全无上传</p>
+        </div>
+    </footer>
+
+    <script>
+        // 全局变量
+        let originalData = [];
+        let processedOldStaff = [];
+        let processedNewStaff = [];
+        let originalHeaders = [];
+        let oldStaffFiltered = [];
+        let newStaffFiltered = [];
+        let jumpToNewStaff = true; // 用于切换跳转方向
+        const PAGE_SIZE = 100; // 每页显示100行
+        let oldCurrentPage = 1;
+        let newCurrentPage = 1;
+        let oldCalculationMethod = 'target'; // 'target' 或 'score'
+
+        // DOM 元素
+        const fileInput = document.getElementById('fileInput');
+        const browseBtn = document.getElementById('browseBtn');
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const removeFileBtn = document.getElementById('removeFileBtn');
+        const resultsSection = document.getElementById('resultsSection');
+        const exportOldBtn = document.getElementById('exportOldBtn');
+        const exportNewBtn = document.getElementById('exportNewBtn');
+        const exportOldImageBtn = document.getElementById('exportOldImageBtn');
+        const exportNewImageBtn = document.getElementById('exportNewImageBtn');
+        const jumpBtn = document.getElementById('jumpBtn');
+        const floatingJumpBtn = document.getElementById('floatingJumpBtn');
+        const templateBtn = document.getElementById('templateBtn');
+        const helpBtn = document.getElementById('helpBtn');
+        const helpModal = document.getElementById('helpModal');
+        const closeHelpBtn = document.getElementById('closeHelpBtn');
+        const processByTargetBtn = document.getElementById('processByTargetBtn');
+        const processByScoreBtn = document.getElementById('processByScoreBtn');
+        const targetSettings = document.getElementById('targetSettings');
+        const scoreSettings = document.getElementById('scoreSettings');
+        const addSatisfactionRangeBtn = document.getElementById('addSatisfactionRange');
+        const addResolutionRangeBtn = document.getElementById('addResolutionRange');
+        const satisfactionScoreRanges = document.getElementById('satisfactionScoreRanges');
+        const resolutionScoreRanges = document.getElementById('resolutionScoreRanges');
+        const processNewStaffBtn = document.getElementById('processNewStaffBtn');
+        const oldStaffSearch = document.getElementById('oldStaffSearch');
+        const newStaffSearch = document.getElementById('newStaffSearch');
+        const oldDeptFilter = document.getElementById('oldDeptFilter');
+        const newDeptFilter = document.getElementById('newDeptFilter');
+        const oldTierFilter = document.getElementById('oldTierFilter');
+        const newTierFilter = document.getElementById('newTierFilter');
+        const oldStaffSection = document.getElementById('oldStaffSection');
+        const newStaffSection = document.getElementById('newStaffSection');
+        const imageExportContainer = document.getElementById('imageExportContainer');
+
+        // 分页相关元素
+        const oldPrevPage = document.getElementById('oldPrevPage');
+        const oldNextPage = document.getElementById('oldNextPage');
+        const oldPageNumbers = document.getElementById('oldPageNumbers');
+        const oldStartRecord = document.getElementById('oldStartRecord');
+        const oldEndRecord = document.getElementById('oldEndRecord');
+        const oldTotalFiltered = document.getElementById('oldTotalFiltered');
+        const oldPrevPageBottom = document.getElementById('oldPrevPageBottom');
+        const oldNextPageBottom = document.getElementById('oldNextPageBottom');
+        const oldPageNumbersBottom = document.getElementById('oldPageNumbersBottom');
+        const oldStartRecordBottom = document.getElementById('oldStartRecordBottom');
+        const oldEndRecordBottom = document.getElementById('oldEndRecordBottom');
+        const oldTotalFilteredBottom = document.getElementById('oldTotalFilteredBottom');
+
+        const newPrevPage = document.getElementById('newPrevPage');
+        const newNextPage = document.getElementById('newNextPage');
+        const newPageNumbers = document.getElementById('newPageNumbers');
+        const newStartRecord = document.getElementById('newStartRecord');
+        const newEndRecord = document.getElementById('newEndRecord');
+        const newTotalFiltered = document.getElementById('newTotalFiltered');
+        const newPrevPageBottom = document.getElementById('newPrevPageBottom');
+        const newNextPageBottom = document.getElementById('newNextPageBottom');
+        const newPageNumbersBottom = document.getElementById('newPageNumbersBottom');
+        const newStartRecordBottom = document.getElementById('newStartRecordBottom');
+        const newEndRecordBottom = document.getElementById('newEndRecordBottom');
+        const newTotalFilteredBottom = document.getElementById('newTotalFilteredBottom');
+
+        // 初始化事件监听
+        function initEventListeners() {
+            // 文件上传相关
+            browseBtn.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', handleFileUpload);
+            uploadArea.addEventListener('dragover', handleDragOver);
+            uploadArea.addEventListener('drop', handleDrop);
+            removeFileBtn.addEventListener('click', removeFile);
+            
+            // 老员工计算按钮
+            processByTargetBtn.addEventListener('click', () => {
+                oldCalculationMethod = 'target';
+                targetSettings.classList.remove('hidden');
+                scoreSettings.classList.add('hidden');
+                processOldStaffByTarget();
+            });
+            
+            processByScoreBtn.addEventListener('click', () => {
+                oldCalculationMethod = 'score';
+                targetSettings.classList.add('hidden');
+                scoreSettings.classList.remove('hidden');
+                processOldStaffByScore();
+            });
+            
+            // 添加分值范围
+            addSatisfactionRangeBtn.addEventListener('click', () => addScoreRange('satisfaction'));
+            addResolutionRangeBtn.addEventListener('click', () => addScoreRange('resolution'));
+            
+            // 处理按钮
+            processNewStaffBtn.addEventListener('click', processNewStaff);
+            
+            // 导出按钮
+            exportOldBtn.addEventListener('click', () => exportResults('old'));
+            exportNewBtn.addEventListener('click', () => exportResults('new'));
+            exportOldImageBtn.addEventListener('click', () => exportAsImage('old'));
+            exportNewImageBtn.addEventListener('click', () => exportAsImage('new'));
+            
+            // 跳转按钮
+            jumpBtn.addEventListener('click', toggleJump);
+            floatingJumpBtn.addEventListener('click', toggleJump);
+            
+            // 搜索和筛选
+            oldStaffSearch.addEventListener('input', () => {
+                oldCurrentPage = 1; // 重置为第一页
+                filterOldStaff();
+            });
+            newStaffSearch.addEventListener('input', () => {
+                newCurrentPage = 1; // 重置为第一页
+                filterNewStaff();
+            });
+            oldDeptFilter.addEventListener('change', () => {
+                oldCurrentPage = 1; // 重置为第一页
+                filterOldStaff();
+            });
+            newDeptFilter.addEventListener('change', () => {
+                newCurrentPage = 1; // 重置为第一页
+                filterNewStaff();
+            });
+            oldTierFilter.addEventListener('change', () => {
+                oldCurrentPage = 1; // 重置为第一页
+                filterOldStaff();
+            });
+            newTierFilter.addEventListener('change', () => {
+                newCurrentPage = 1; // 重置为第一页
+                filterNewStaff();
+            });
+            
+            // 分页控制
+            oldPrevPage.addEventListener('click', () => goToOldPage(oldCurrentPage - 1));
+            oldNextPage.addEventListener('click', () => goToOldPage(oldCurrentPage + 1));
+            oldPrevPageBottom.addEventListener('click', () => goToOldPage(oldCurrentPage - 1));
+            oldNextPageBottom.addEventListener('click', () => goToOldPage(oldCurrentPage + 1));
+            
+            newPrevPage.addEventListener('click', () => goToNewPage(newCurrentPage - 1));
+            newNextPage.addEventListener('click', () => goToNewPage(newCurrentPage + 1));
+            newPrevPageBottom.addEventListener('click', () => goToNewPage(newCurrentPage - 1));
+            newNextPageBottom.addEventListener('click', () => goToNewPage(newCurrentPage + 1));
+            
+            // 模板下载
+            templateBtn.addEventListener('click', downloadTemplate);
+            
+            // 帮助模态框
+            helpBtn.addEventListener('click', () => helpModal.classList.replace('hidden', 'flex'));
+            closeHelpBtn.addEventListener('click', () => helpModal.classList.replace('flex', 'hidden'));
+            helpModal.addEventListener('click', (e) => {
+                if (e.target === helpModal) {
+                    helpModal.classList.replace('flex', 'hidden');
+                }
+            });
+
+            // 初始隐藏悬浮按钮
+            floatingJumpBtn.classList.add('hidden');
+        }
+
+        // 添加分值范围
+        function addScoreRange(type) {
+            const container = type === 'satisfaction' ? satisfactionScoreRanges : resolutionScoreRanges;
+            const newRange = document.createElement('div');
+            newRange.className = 'score-range-item grid grid-cols-1 md:grid-cols-3 gap-4 mb-3 p-3 bg-gray-50 rounded';
+            newRange.innerHTML = `
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">最小值 (%)</label>
+                    <input type="number" class="min-value w-full px-3 py-2 border border-gray-300 rounded-lg" value="0" step="0.1" min="0" max="100">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">最大值 (%)</label>
+                    <input type="number" class="max-value w-full px-3 py-2 border border-gray-300 rounded-lg" value="0" step="0.1" min="0" max="100">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">分值</label>
+                    <input type="number" class="score w-full px-3 py-2 border border-gray-300 rounded-lg" value="1" min="1">
+                </div>
+            `;
+            container.appendChild(newRange);
+        }
+
+        // 处理文件上传
+        function handleFileUpload(e) {
+            const file = e.target.files[0];
+            if (file) {
+                processFile(file);
+            }
+        }
+
+        // 处理拖放
+        function handleDragOver(e) {
+            e.preventDefault();
+            uploadArea.classList.add('border-primary');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('border-primary');
+            const file = e.dataTransfer.files[0];
+            if (file && (file.name.endsWith('.xlsx') || file.name.endsWith('.xls'))) {
+                processFile(file);
+            }
+        }
+
+        // 处理文件
+        function processFile(file) {
+            // 显示文件信息
+            fileName.textContent = file.name;
+            fileInfo.classList.remove('hidden');
+            
+            // 读取Excel文件
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                    
+                    // 检查是否包含"新老员工"字段
+                    if (jsonData.length > 0 && !jsonData[0].hasOwnProperty('新老员工')) {
+                        alert('导入的Excel文件必须包含"新老员工"字段用于区分人员类型！');
+                        removeFile();
+                        return;
+                    }
+                    
+                    // 保存原始数据
+                    originalData = jsonData;
+                    originalHeaders = Object.keys(jsonData[0] || {});
+                    
+                    // 处理数据
+                    processAllData();
+                    
+                    // 显示结果区域和悬浮按钮
+                    resultsSection.classList.remove('hidden');
+                    floatingJumpBtn.classList.remove('hidden');
+                    
+                    // 初始化时默认按目标值计算
+                    processByTargetBtn.click();
+                } catch (error) {
+                    alert('文件解析错误: ' + error.message);
+                    console.error(error);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // 处理所有数据 - 根据"新老员工"字段区分
+        function processAllData() {
+            // 根据"新老员工"字段区分，支持"老员工"、"新员工"两种值
+            processedOldStaff = originalData.filter(item => 
+                item['新老员工'] && item['新老员工'].toString().trim() === '老员工'
+            );
+            processedNewStaff = originalData.filter(item => 
+                item['新老员工'] && item['新老员工'].toString().trim() === '新员工'
+            );
+            
+            // 初始化部门筛选器
+            initDepartmentFilters();
+            
+            // 计算统计信息
+            updateStatistics();
+        }
+
+        // 按目标值处理老员工数据
+        function processOldStaffByTarget() {
+            const satisfactionTarget = parseFloat(document.getElementById('oldSatisfactionTarget').value) / 100;
+            const resolutionTarget = parseFloat(document.getElementById('oldResolutionTarget').value) / 100;
+            const evaluationTarget = parseInt(document.getElementById('oldEvaluationTarget').value);
+            const resolutionEvaluationTarget = parseInt(document.getElementById('oldResolutionEvaluationTarget').value);
+            
+            processedOldStaff = processedOldStaff.map(staff => {
+                // 计算是否达到各项目标
+                const satisfaction达标 = staff['满意度_剔除R'] >= satisfactionTarget;
+                const resolution达标 = staff['解决率_剔除R'] >= resolutionTarget;
+                const evaluation达标 = staff['评价量_剔除R'] >= evaluationTarget;
+                const resolutionEvaluation达标 = staff['解决率总评价量_剔除R'] >= resolutionEvaluationTarget;
+                
+                // 判断是否为第一梯队
+                const isFirstTier = satisfaction达标 && resolution达标 && evaluation达标 && resolutionEvaluation达标;
+                
+                // 计算差距
+                const satisfaction差距 = satisfactionTarget - staff['满意度_剔除R'];
+                const resolution差距 = resolutionTarget - staff['解决率_剔除R'];
+                const evaluation差距 = evaluationTarget - staff['评价量_剔除R'];
+                const resolutionEvaluation差距 = resolutionEvaluationTarget - staff['解决率总评价量_剔除R'];
+                
+                // 计算未达原因
+                const reasons = [];
+                if (!satisfaction达标) reasons.push(`满意度_剔除R未达标 (差距: ${(satisfaction差距 * 100).toFixed(1)}%)`);
+                if (!resolution达标) reasons.push(`解决率_剔除R未达标 (差距: ${(resolution差距 * 100).toFixed(1)}%)`);
+                if (!evaluation达标) reasons.push(`评价量_剔除R未达标 (差距: ${evaluation差距})`);
+                if (!resolutionEvaluation达标) reasons.push(`解决率总评价量_剔除R未达标 (差距: ${resolutionEvaluation差距})`);
+                
+                return {
+                    ...staff,
+                    isFirstTier,
+                    isSecondTier: !isFirstTier,
+                    isThirdTier: false,
+                    tier: isFirstTier ? 1 : 2,
+                    未达标项: {
+                        satisfaction: !satisfaction达标,
+                        resolution: !resolution达标,
+                        evaluation: !evaluation达标,
+                        resolutionEvaluation: !resolutionEvaluation达标
+                    },
+                    差距值: {
+                        satisfaction: satisfaction差距,
+                        resolution: resolution差距,
+                        evaluation: evaluation差距,
+                        resolutionEvaluation: resolutionEvaluation差距
+                    },
+                    非第一梯队原因: reasons.join('; ')
+                };
+            });
+            
+            // 筛选并更新表格
+            filterOldStaff();
+            updateOldStaffTable();
+            updateStatistics();
+        }
+
+        // 按分值处理老员工数据
+        function processOldStaffByScore() {
+            // 获取分值范围配置
+            const satisfactionRanges = getScoreRanges('satisfaction');
+            const resolutionRanges = getScoreRanges('resolution');
+            const evaluationThreshold = parseInt(document.getElementById('secondTierEvaluationThreshold').value);
+            
+            processedOldStaff = processedOldStaff.map(staff => {
+                // 计算满意度得分
+                const satisfactionScore = getScoreForValue(
+                    staff['满意度_剔除R'] * 100, // 转换为百分比
+                    satisfactionRanges
+                );
+                
+                // 计算解决率得分
+                const resolutionScore = getScoreForValue(
+                    staff['解决率_剔除R'] * 100, // 转换为百分比
+                    resolutionRanges
+                );
+                
+                // 计算总分
+                const totalScore = satisfactionScore + resolutionScore;
+                
+                // 判断是否有任一得分为3
+                const hasScore3 = satisfactionScore === 3 || resolutionScore === 3;
+                
+                // 判断评价量是否低于阈值
+                const evaluationBelowThreshold = 
+                    staff['评价量_剔除R'] < evaluationThreshold || 
+                    staff['已解决量_剔除R'] < evaluationThreshold;
+                
+                // 确定梯队 - 总分5或6优先级最高
+                let tier = 2; // 默认第二梯队
+                
+                // 总分=5或6为第三梯队，优先级最高
+                if (totalScore === 5 || totalScore === 6) {
+                    tier = 3;
+                } 
+                // 其次判断是否有任一得分为3
+                else if (hasScore3) {
+                    tier = 2;
+                } 
+                // 总分2-4为第一梯队
+                else if (totalScore >= 2 && totalScore <= 4) {
+                    tier = 1;
+                } 
+                // 评价量低于阈值为第二梯队
+                else if (evaluationBelowThreshold) {
+                    tier = 2;
+                }
+                
+                // 计算未达第一梯队原因
+                const reasons = [];
+                if (tier !== 1) {
+                    if (totalScore === 5 || totalScore === 6) reasons.push(`总分${totalScore}分，属于第三梯队`);
+                    if (hasScore3) reasons.push('满意度或解决率得分为3');
+                    if (evaluationBelowThreshold) reasons.push('评价量或已解决量低于阈值');
+                    if (reasons.length === 0) reasons.push('不符合第一梯队条件');
+                }
+                
+                return {
+                    ...staff,
+                    satisfactionScore,
+                    resolutionScore,
+                    totalScore,
+                    isFirstTier: tier === 1,
+                    isSecondTier: tier === 2,
+                    isThirdTier: tier === 3,
+                    tier,
+                    非第一梯队原因: reasons.join('; ')
+                };
+            });
+            
+            // 筛选并更新表格
+            filterOldStaff();
+            updateOldStaffTable();
+            updateStatistics();
+        }
+
+        // 获取分值范围配置
+        function getScoreRanges(type) {
+            const container = type === 'satisfaction' ? satisfactionScoreRanges : resolutionScoreRanges;
+            const items = container.getElementsByClassName('score-range-item');
+            const ranges = [];
+            
+            for (let item of items) {
+                const min = parseFloat(item.querySelector('.min-value').value);
+                const max = parseFloat(item.querySelector('.max-value').value);
+                const score = parseInt(item.querySelector('.score').value);
+                
+                ranges.push({ min, max, score });
+            }
+            
+            return ranges;
+        }
+
+        // 根据值获取对应的分数
+        function getScoreForValue(value, ranges) {
+            // 查找匹配的范围
+            for (let range of ranges) {
+                if (value >= range.min && value <= range.max) {
+                    return range.score;
+                }
+            }
+            return 0; // 默认分数
+        }
+
+        // 处理新员工数据
+        function processNewStaff() {
+            const satisfactionTarget = parseFloat(document.getElementById('newSatisfactionTarget').value) / 100;
+            const firstTierCount = parseInt(document.getElementById('newFirstTierCount').value);
+            const thirdTierCount = parseInt(document.getElementById('newThirdTierCount').value);
+            
+            // 计算满意度影响值并排序
+            let staffWithImpact = processedNewStaff.map(staff => {
+                const impact = staff['满意度_剔除R'] - satisfactionTarget;
+                return {
+                    ...staff,
+                    满意度影响值: impact
+                };
+            }).sort((a, b) => b.满意度影响值 - a.满意度影响值); // 降序排序
+            
+            // 确定梯队
+            const totalStaff = staffWithImpact.length;
+            const thirdTierStartIndex = Math.max(0, totalStaff - thirdTierCount);
+            
+            processedNewStaff = staffWithImpact.map((staff, index) => {
+                let tier = 2; // 默认第二梯队
+                
+                if (index < firstTierCount) {
+                    tier = 1; // 第一梯队
+                } else if (index >= thirdTierStartIndex) {
+                    tier = 3; // 第三梯队
+                }
+                
+                // 计算未达第一梯队原因
+                let reason = '';
+                if (tier !== 1) {
+                    if (tier === 3) {
+                        reason = '满意度影响值属于后' + thirdTierCount + '名，属于第三梯队';
+                    } else {
+                        reason = '满意度影响值未进入前' + firstTierCount + '名';
+                    }
+                }
+                
+                return {
+                    ...staff,
+                    isFirstTier: tier === 1,
+                    isSecondTier: tier === 2,
+                    isThirdTier: tier === 3,
+                    tier,
+                    非第一梯队原因: reason
+                };
+            });
+            
+            // 筛选并更新表格
+            filterNewStaff();
+            updateNewStaffTable();
+            updateStatistics();
+        }
+
+        // 初始化部门筛选器
+        function initDepartmentFilters() {
+            // 收集所有部门
+            const departments = new Set();
+            originalData.forEach(item => {
+                if (item.部门) departments.add(item.部门);
+            });
+            
+            // 清空现有选项（保留"全部部门"）
+            while (oldDeptFilter.options.length > 1) {
+                oldDeptFilter.remove(1);
+            }
+            while (newDeptFilter.options.length > 1) {
+                newDeptFilter.remove(1);
+            }
+            
+            // 添加部门选项
+            departments.forEach(dept => {
+                const option1 = document.createElement('option');
+                option1.value = dept;
+                option1.textContent = dept;
+                oldDeptFilter.appendChild(option1);
+                
+                const option2 = document.createElement('option');
+                option2.value = dept;
+                option2.textContent = dept;
+                newDeptFilter.appendChild(option2);
+            });
+        }
+
+        // 筛选老员工数据
+        function filterOldStaff() {
+            const searchTerm = oldStaffSearch.value.toLowerCase();
+            const deptFilter = oldDeptFilter.value;
+            const tierFilter = oldTierFilter.value;
+            
+            oldStaffFiltered = processedOldStaff.filter(staff => {
+                // 搜索筛选
+                const matchesSearch = 
+                    (!searchTerm) || 
+                    (staff['ERP账号'] && staff['ERP账号'].toString().toLowerCase().includes(searchTerm)) ||
+                    (staff['姓名'] && staff['姓名'].toLowerCase().includes(searchTerm));
+                
+                // 部门筛选
+                const matchesDept = !deptFilter || staff['部门'] === deptFilter;
+                
+                // 梯队筛选
+                const matchesTier = !tierFilter || staff.tier === parseInt(tierFilter);
+                
+                return matchesSearch && matchesDept && matchesTier;
+            });
+            
+            // 更新分页
+            updateOldPagination();
+            // 更新表格
+            updateOldStaffTable();
+        }
+
+        // 筛选新员工数据
+        function filterNewStaff() {
+            const searchTerm = newStaffSearch.value.toLowerCase();
+            const deptFilter = newDeptFilter.value;
+            const tierFilter = newTierFilter.value;
+            
+            newStaffFiltered = processedNewStaff.filter(staff => {
+                // 搜索筛选
+                const matchesSearch = 
+                    (!searchTerm) || 
+                    (staff['ERP账号'] && staff['ERP账号'].toString().toLowerCase().includes(searchTerm)) ||
+                    (staff['姓名'] && staff['姓名'].toLowerCase().includes(searchTerm));
+                
+                // 部门筛选
+                const matchesDept = !deptFilter || staff['部门'] === deptFilter;
+                
+                // 梯队筛选
+                const matchesTier = !tierFilter || staff.tier === parseInt(tierFilter);
+                
+                return matchesSearch && matchesDept && matchesTier;
+            });
+            
+            // 更新分页
+            updateNewPagination();
+            // 更新表格
+            updateNewStaffTable();
+        }
+
+        // 更新老员工分页
+        function updateOldPagination() {
+            const totalPages = Math.ceil(oldStaffFiltered.length / PAGE_SIZE);
+            
+            // 确保当前页在有效范围内
+            if (oldCurrentPage > totalPages) {
+                oldCurrentPage = Math.max(1, totalPages);
+            }
+            
+            // 更新分页信息
+            const startRecord = (oldCurrentPage - 1) * PAGE_SIZE + 1;
+            const endRecord = Math.min(oldCurrentPage * PAGE_SIZE, oldStaffFiltered.length);
+            
+            oldStartRecord.textContent = startRecord;
+            oldEndRecord.textContent = endRecord;
+            oldTotalFiltered.textContent = oldStaffFiltered.length;
+            
+            oldStartRecordBottom.textContent = startRecord;
+            oldEndRecordBottom.textContent = endRecord;
+            oldTotalFilteredBottom.textContent = oldStaffFiltered.length;
+            
+            // 更新分页按钮状态
+            oldPrevPage.disabled = oldCurrentPage <= 1;
+            oldNextPage.disabled = oldCurrentPage >= totalPages;
+            oldPrevPageBottom.disabled = oldCurrentPage <= 1;
+            oldNextPageBottom.disabled = oldCurrentPage >= totalPages;
+            
+            // 更新页码按钮
+            updatePageNumbers(oldPageNumbers, totalPages, oldCurrentPage, 'old');
+            updatePageNumbers(oldPageNumbersBottom, totalPages, oldCurrentPage, 'old');
+        }
+
+        // 更新新员工分页
+        function updateNewPagination() {
+            const totalPages = Math.ceil(newStaffFiltered.length / PAGE_SIZE);
+            
+            // 确保当前页在有效范围内
+            if (newCurrentPage > totalPages) {
+                newCurrentPage = Math.max(1, totalPages);
+            }
+            
+            // 更新分页信息
+            const startRecord = (newCurrentPage - 1) * PAGE_SIZE + 1;
+            const endRecord = Math.min(newCurrentPage * PAGE_SIZE, newStaffFiltered.length);
+            
+            newStartRecord.textContent = startRecord;
+            newEndRecord.textContent = endRecord;
+            newTotalFiltered.textContent = newStaffFiltered.length;
+            
+            newStartRecordBottom.textContent = startRecord;
+            newEndRecordBottom.textContent = endRecord;
+            newTotalFilteredBottom.textContent = newStaffFiltered.length;
+            
+            // 更新分页按钮状态
+            newPrevPage.disabled = newCurrentPage <= 1;
+            newNextPage.disabled = newCurrentPage >= totalPages;
+            newPrevPageBottom.disabled = newCurrentPage <= 1;
+            newNextPageBottom.disabled = newCurrentPage >= totalPages;
+            
+            // 更新页码按钮
+            updatePageNumbers(newPageNumbers, totalPages, newCurrentPage, 'new');
+            updatePageNumbers(newPageNumbersBottom, totalPages, newCurrentPage, 'new');
+        }
+
+        // 更新页码按钮
+        function updatePageNumbers(container, totalPages, currentPage, type) {
+            container.innerHTML = '';
+            
+            // 最多显示10个页码
+            const maxVisiblePages = 10;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+            let endPage = startPage + maxVisiblePages - 1;
+            
+            if (endPage > totalPages) {
+                endPage = totalPages;
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+            }
+            
+            // 添加第一页和省略号（如果需要）
+            if (startPage > 1) {
+                addPageButton(container, 1, currentPage, type);
+                if (startPage > 2) {
+                    const ellipsis = document.createElement('span');
+                    ellipsis.className = 'px-2';
+                    ellipsis.textContent = '...';
+                    container.appendChild(ellipsis);
+                }
+            }
+            
+            // 添加可见页码
+            for (let i = startPage; i <= endPage; i++) {
+                addPageButton(container, i, currentPage, type);
+            }
+            
+            // 添加最后一页和省略号（如果需要）
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    const ellipsis = document.createElement('span');
+                    ellipsis.className = 'px-2';
+                    ellipsis.textContent = '...';
+                    container.appendChild(ellipsis);
+                }
+                addPageButton(container, totalPages, currentPage, type);
+            }
+        }
+
+        // 添加页码按钮
+        function addPageButton(container, pageNum, currentPage, type) {
+            const button = document.createElement('button');
+            button.className = `pagination-btn ${pageNum === currentPage ? 'active' : ''}`;
+            button.textContent = pageNum;
+            button.addEventListener('click', () => {
+                if (type === 'old') {
+                    goToOldPage(pageNum);
+                } else {
+                    goToNewPage(pageNum);
+                }
+            });
+            container.appendChild(button);
+        }
+
+        // 跳转到老员工指定页
+        function goToOldPage(pageNum) {
+            if (pageNum < 1 || pageNum > Math.ceil(oldStaffFiltered.length / PAGE_SIZE)) {
+                return;
+            }
+            
+            oldCurrentPage = pageNum;
+            updateOldPagination();
+            updateOldStaffTable();
+            
+            // 滚动到表格顶部
+            document.getElementById('oldStaffSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // 跳转到新员工指定页
+        function goToNewPage(pageNum) {
+            if (pageNum < 1 || pageNum > Math.ceil(newStaffFiltered.length / PAGE_SIZE)) {
+                return;
+            }
+            
+            newCurrentPage = pageNum;
+            updateNewPagination();
+            updateNewStaffTable();
+            
+            // 滚动到表格顶部
+            document.getElementById('newStaffSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // 更新老员工表格
+        function updateOldStaffTable() {
+            const tableHeader = document.getElementById('oldStaffTableHeader');
+            const tableBody = document.getElementById('oldStaffTableBody');
+            
+            // 清空表格
+            tableHeader.innerHTML = '';
+            tableBody.innerHTML = '';
+            
+            // 如果没有数据，显示提示
+            if (oldStaffFiltered.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td colspan="100%" class="text-center py-4 text-gray-500">没有找到匹配的老员工数据</td>`;
+                tableBody.appendChild(row);
+                return;
+            }
+            
+            // 计算当前页的数据
+            const startIndex = (oldCurrentPage - 1) * PAGE_SIZE;
+            const currentPageData = oldStaffFiltered.slice(startIndex, startIndex + PAGE_SIZE);
+            
+            // 获取表头（使用第一条数据的键）
+            const headers = Object.keys(currentPageData[0]);
+            
+            // 定义字段顺序：梯队在前，非第一梯队原因在后
+            const customHeaders = [
+                '梯队', 
+                ...headers.filter(h => !['isFirstTier', 'isSecondTier', 'isThirdTier', 'tier', '未达标项', '差距值', '非第一梯队原因'].includes(h)),
+                '非第一梯队原因'
+            ];
+            
+            // 创建表头
+            customHeaders.forEach(header => {
+                const th = document.createElement('th');
+                th.className = 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider';
+                th.textContent = formatHeader(header);
+                tableHeader.appendChild(th);
+            });
+            
+            // 创建表格内容
+            currentPageData.forEach(staff => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50 transition-colors';
+                
+                // 添加梯队单元格
+                const tierTd = document.createElement('td');
+                tierTd.className = 'px-6 py-4 whitespace-nowrap text-sm';
+                
+                if (staff.tier === 1) {
+                    tierTd.className += ' first-tier';
+                    tierTd.textContent = '第一梯队';
+                } else if (staff.tier === 2) {
+                    tierTd.className += ' second-tier';
+                    tierTd.textContent = '第二梯队';
+                } else {
+                    tierTd.className += ' third-tier';
+                    tierTd.textContent = '第三梯队';
+                }
+                tr.appendChild(tierTd);
+                
+                // 添加其他字段（排除非第一梯队原因，后面单独处理）
+                const otherHeaders = customHeaders.slice(1).filter(h => h !== '非第一梯队原因');
+                otherHeaders.forEach(header => {
+                    const td = document.createElement('td');
+                    td.className = 'px-6 py-4 whitespace-nowrap text-sm text-gray-900';
+                    
+                    // 特殊处理需要高亮的字段
+                    let isHighlighted = false;
+                    let displayValue = staff[header];
+                    
+                    // 格式化数值
+                    if (typeof displayValue === 'number') {
+                        // 解决率总评价量_剔除R保持数字格式
+                        if (header === '解决率总评价量_剔除R') {
+                            displayValue = displayValue.toFixed(0);
+                        }
+                        // 百分比字段（排除解决率总评价量_剔除R）
+                        else if (header.includes('满意度') || header.includes('解决率')) {
+                            displayValue = (displayValue * 100).toFixed(1) + '%';
+                        }
+                        // 分值字段
+                        else if (header.includes('Score') || header.includes('分值')) {
+                            displayValue = displayValue.toFixed(0);
+                        }
+                        // 其他数字保留两位小数
+                        else {
+                            displayValue = displayValue.toFixed(2);
+                        }
+                    }
+                    
+                    // 检查是否需要高亮显示（未达标项）
+                    if (oldCalculationMethod === 'target' && staff.未达标项) {
+                        if (header === '满意度_剔除R' && staff.未达标项.satisfaction) {
+                            isHighlighted = true;
+                            displayValue += ` (差距: ${(staff.差距值.satisfaction * 100).toFixed(1)}%)`;
+                        } else if (header === '解决率_剔除R' && staff.未达标项.resolution) {
+                            isHighlighted = true;
+                            displayValue += ` (差距: ${(staff.差距值.resolution * 100).toFixed(1)}%)`;
+                        } else if (header === '评价量_剔除R' && staff.未达标项.evaluation) {
+                            isHighlighted = true;
+                            displayValue += ` (差距: ${staff.差距值.evaluation})`;
+                        } else if (header === '解决率总评价量_剔除R' && staff.未达标项.resolutionEvaluation) {
+                            isHighlighted = true;
+                            displayValue += ` (差距: ${staff.差距值.resolutionEvaluation})`;
+                        }
+                    }
+                    
+                    if (isHighlighted) {
+                        td.className += ' highlight-cell';
+                    }
+                    
+                    td.textContent = displayValue || '';
+                    tr.appendChild(td);
+                });
+                
+                // 添加非第一梯队原因字段
+                const reasonTd = document.createElement('td');
+                reasonTd.className = 'px-6 py-4 whitespace-nowrap text-sm text-gray-900';
+                reasonTd.textContent = staff['非第一梯队原因'] || '';
+                tr.appendChild(reasonTd);
+                
+                tableBody.appendChild(tr);
+            });
+            
+            // 更新统计信息
+            updateOldStaffStatistics();
+        }
+
+        // 更新新员工表格
+        function updateNewStaffTable() {
+            const tableHeader = document.getElementById('newStaffTableHeader');
+            const tableBody = document.getElementById('newStaffTableBody');
+            
+            // 清空表格
+            tableHeader.innerHTML = '';
+            tableBody.innerHTML = '';
+            
+            // 如果没有数据，显示提示
+            if (newStaffFiltered.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td colspan="100%" class="text-center py-4 text-gray-500">没有找到匹配的新员工数据</td>`;
+                tableBody.appendChild(row);
+                return;
+            }
+            
+            // 计算当前页的数据
+            const startIndex = (newCurrentPage - 1) * PAGE_SIZE;
+            const currentPageData = newStaffFiltered.slice(startIndex, startIndex + PAGE_SIZE);
+            
+            // 获取表头（使用第一条数据的键）
+            const headers = Object.keys(currentPageData[0]);
+            
+            // 定义字段顺序：梯队在前，非第一梯队原因在后
+            const customHeaders = [
+                '梯队', 
+                ...headers.filter(h => !['isFirstTier', 'isSecondTier', 'isThirdTier', 'tier', '非第一梯队原因'].includes(h)),
+                '非第一梯队原因'
+            ];
+            
+            // 创建表头
+            customHeaders.forEach(header => {
+                const th = document.createElement('th');
+                th.className = 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider';
+                th.textContent = formatHeader(header);
+                tableHeader.appendChild(th);
+            });
+            
+            // 创建表格内容
+            currentPageData.forEach(staff => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50 transition-colors';
+                
+                // 添加梯队单元格
+                const tierTd = document.createElement('td');
+                tierTd.className = 'px-6 py-4 whitespace-nowrap text-sm';
+                
+                if (staff.tier === 1) {
+                    tierTd.className += ' first-tier';
+                    tierTd.textContent = '第一梯队';
+                } else if (staff.tier === 2) {
+                    tierTd.className += ' second-tier';
+                    tierTd.textContent = '第二梯队';
+                } else {
+                    tierTd.className += ' third-tier';
+                    tierTd.textContent = '第三梯队';
+                }
+                tr.appendChild(tierTd);
+                
+                // 添加其他字段（排除非第一梯队原因，后面单独处理）
+                const otherHeaders = customHeaders.slice(1).filter(h => h !== '非第一梯队原因');
+                otherHeaders.forEach(header => {
+                    const td = document.createElement('td');
+                    td.className = 'px-6 py-4 whitespace-nowrap text-sm text-gray-900';
+                    
+                    let displayValue = staff[header];
+                    
+                    // 格式化数值
+                    if (typeof displayValue === 'number') {
+                        // 解决率总评价量_剔除R保持数字格式
+                        if (header === '解决率总评价量_剔除R') {
+                            displayValue = displayValue.toFixed(0);
+                        }
+                        // 百分比字段（排除解决率总评价量_剔除R）
+                        else if (header.includes('满意度') || header.includes('解决率')) {
+                            displayValue = (displayValue * 100).toFixed(1) + '%';
+                        }
+                        // 满意度影响值
+                        else if (header === '满意度影响值') {
+                            displayValue = (displayValue * 100).toFixed(1) + '%';
+                        }
+                        // 其他数字保留两位小数
+                        else {
+                            displayValue = displayValue.toFixed(2);
+                        }
+                    }
+                    
+                    td.textContent = displayValue || '';
+                    tr.appendChild(td);
+                });
+                
+                // 添加非第一梯队原因字段
+                const reasonTd = document.createElement('td');
+                reasonTd.className = 'px-6 py-4 whitespace-nowrap text-sm text-gray-900';
+                reasonTd.textContent = staff['非第一梯队原因'] || '';
+                tr.appendChild(reasonTd);
+                
+                tableBody.appendChild(tr);
+            });
+            
+            // 更新统计信息
+            updateNewStaffStatistics();
+        }
+
+        // 格式化表头
+        function formatHeader(header) {
+            switch(header) {
+                case 'satisfactionScore': return '满意度得分';
+                case 'resolutionScore': return '解决率得分';
+                case 'totalScore': return '总分值';
+                default: return header;
+            }
+        }
+
+        // 更新老员工统计信息
+        function updateOldStaffStatistics() {
+            const firstTierCount = processedOldStaff.filter(s => s.isFirstTier).length;
+            const secondTierCount = processedOldStaff.filter(s => s.isSecondTier).length;
+            const thirdTierCount = processedOldStaff.filter(s => s.isThirdTier).length;
+            const totalCount = processedOldStaff.length;
+            
+            document.getElementById('oldFirstTierCount').textContent = firstTierCount;
+            document.getElementById('oldSecondTierCount').textContent = secondTierCount;
+            document.getElementById('oldThirdTierCount').textContent = thirdTierCount;
+            document.getElementById('oldTotalCount').textContent = totalCount;
+        }
+
+        // 更新新员工统计信息
+        function updateNewStaffStatistics() {
+            const firstTierCount = processedNewStaff.filter(s => s.isFirstTier).length;
+            const secondTierCount = processedNewStaff.filter(s => s.isSecondTier).length;
+            const thirdTierCount = processedNewStaff.filter(s => s.isThirdTier).length;
+            const totalCount = processedNewStaff.length;
+            
+            document.getElementById('newFirstTierCountDisplay').textContent = firstTierCount;
+            document.getElementById('newSecondTierCount').textContent = secondTierCount;
+            document.getElementById('newThirdTierCountDisplay').textContent = thirdTierCount;
+            document.getElementById('newTotalCount').textContent = totalCount;
+        }
+
+        // 更新总体统计信息
+        function updateStatistics() {
+            const totalRecords = originalData.length;
+            const oldStaffCount = processedOldStaff.length;
+            const newStaffCount = processedNewStaff.length;
+            const firstTierCount = 
+                processedOldStaff.filter(s => s.isFirstTier).length + 
+                processedNewStaff.filter(s => s.isFirstTier).length;
+            
+            document.getElementById('totalRecords').textContent = totalRecords;
+            document.getElementById('oldStaffCount').textContent = oldStaffCount;
+            document.getElementById('newStaffCount').textContent = newStaffCount;
+            document.getElementById('firstTierCount').textContent = firstTierCount;
+            
+            // 更新各员工类型的统计
+            updateOldStaffStatistics();
+            updateNewStaffStatistics();
+        }
+
+        // 切换跳转方向
+        function toggleJump() {
+            jumpToNewStaff = !jumpToNewStaff;
+            
+            if (jumpToNewStaff) {
+                jumpBtn.innerHTML = '<i class="fa fa-exchange mr-2"></i><span>跳转至新员工数据</span>';
+                newStaffSection.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                jumpBtn.innerHTML = '<i class="fa fa-exchange mr-2"></i><span>跳转至老员工数据</span>';
+                oldStaffSection.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        // 导出结果
+        function exportResults(type) {
+            const data = type === 'old' ? oldStaffFiltered : newStaffFiltered;
+            if (data.length === 0) {
+                alert(`没有可导出的${type === 'old' ? '老员工' : '新员工'}数据`);
+                return;
+            }
+            
+            // 准备导出数据（按页面展示格式，梯队在前，非第一梯队原因在后）
+            const exportData = data.map(staff => {
+                // 先构建基础字段对象
+                const baseFields = {...staff};
+                delete baseFields.isFirstTier;
+                delete baseFields.isSecondTier;
+                delete baseFields.isThirdTier;
+                delete baseFields.未达标项;
+                delete baseFields.差距值;
+                
+                // 格式化数值为页面展示格式
+                const formattedFields = {};
+                for (const key in baseFields) {
+                    let value = baseFields[key];
+                    
+                    if (typeof value === 'number') {
+                        // 解决率总评价量_剔除R保持数字格式
+                        if (key === '解决率总评价量_剔除R') {
+                            formattedFields[key] = value.toFixed(0);
+                        }
+                        // 百分比字段（排除解决率总评价量_剔除R）
+                        else if (key.includes('满意度') || key.includes('解决率')) {
+                            formattedFields[key] = (value * 100).toFixed(1) + '%';
+                        }
+                        // 满意度影响值
+                        else if (key === '满意度影响值') {
+                            formattedFields[key] = (value * 100).toFixed(1) + '%';
+                        }
+                        // 分值字段
+                        else if (key.includes('Score') || key.includes('分值')) {
+                            formattedFields[key] = value.toFixed(0);
+                        }
+                        // 其他数字保留两位小数
+                        else {
+                            formattedFields[key] = value.toFixed(2);
+                        }
+                    } else {
+                        formattedFields[key] = value || '';
+                    }
+                }
+                
+                // 添加梯队显示文本
+                let tierText = '';
+                if (staff.tier === 1) tierText = '第一梯队';
+                else if (staff.tier === 2) tierText = '第二梯队';
+                else if (staff.tier === 3) tierText = '第三梯队';
+                
+                // 构建最终导出对象，确保梯队在前，非第一梯队原因在后
+                const orderedFields = {
+                    '梯队': tierText,
+                    ...Object.fromEntries(
+                        Object.entries(formattedFields).filter(([k]) => k !== '非第一梯队原因' && k !== 'tier')
+                    ),
+                    '非第一梯队原因': formattedFields['非第一梯队原因'] || ''
+                };
+                
+                return orderedFields;
+            });
+            
+            // 创建工作簿和工作表
+            const worksheet = XLSX.utils.json_to_sheet(exportData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, type === 'old' ? '老员工数据' : '新员工数据');
+            
+            // 导出文件
+            XLSX.writeFile(workbook, `${type === 'old' ? '老员工' : '新员工'}数据_${new Date().toLocaleDateString()}.xlsx`);
+        }
+
+        // 导出为图片
+        function exportAsImage(type) {
+            const container = type === 'old' ? oldStaffSection : newStaffSection;
+            const tableContainer = container.querySelector('.overflow-x-auto');
+            
+            if (!tableContainer) {
+                alert(`没有可导出的${type === 'old' ? '老员工' : '新员工'}表格数据`);
+                return;
+            }
+            
+            // 克隆整个表格区域用于导出（包含所有数据样式）
+            const clone = container.cloneNode(true);
+            // 移除分页控件，只保留表格
+            const paginationElements = clone.querySelectorAll('#oldPagination, #oldPageNumbers, #newPagination, #newPageNumbers');
+            paginationElements.forEach(el => el.remove());
+            
+            imageExportContainer.innerHTML = '';
+            imageExportContainer.appendChild(clone);
+            
+            // 确保克隆的表格可见以便截图
+            imageExportContainer.classList.remove('hidden');
+            
+            // 延迟截图以确保DOM已更新
+            setTimeout(() => {
+                html2canvas(imageExportContainer, {
+                    scale: 2, // 提高分辨率
+                    useCORS: true,
+                    logging: false
+                }).then(canvas => {
+                    // 创建下载链接
+                    const link = document.createElement('a');
+                    link.download = `${type === 'old' ? '老员工' : '新员工'}数据表格_${new Date().toLocaleDateString()}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                    
+                    // 隐藏临时容器
+                    imageExportContainer.classList.add('hidden');
+                }).catch(error => {
+                    console.error('导出图片失败:', error);
+                    alert('导出图片失败: ' + error.message);
+                    imageExportContainer.classList.add('hidden');
+                });
+            }, 300);
+        }
+
+        // 移除文件
+        function removeFile() {
+            fileInput.value = '';
+            fileInfo.classList.add('hidden');
+            resultsSection.classList.add('hidden');
+            floatingJumpBtn.classList.add('hidden');
+            originalData = [];
+            processedOldStaff = [];
+            processedNewStaff = [];
+            originalHeaders = [];
+            oldStaffFiltered = [];
+            newStaffFiltered = [];
+        }
+
+        // 下载模板
+        function downloadTemplate() {
+            // 创建模板数据，包含"新老员工"字段
+            const templateData = [
+                {
+                    'ERP账号': '10001',
+                    '姓名': '张三',
+                    '部门': '客服一部',
+                    '新老员工': '老员工',
+                    '满意度_剔除R': 0.85,
+                    '解决率_剔除R': 0.75,
+                    '评价量_剔除R': 10,
+                    '解决率总评价量_剔除R': 10,
+                    '已解决量_剔除R': 8
+                },
+                {
+                    'ERP账号': '10002',
+                    '姓名': '李四',
+                    '部门': '客服二部',
+                    '新老员工': '新员工',
+                    '满意度_剔除R': 0.82,
+                    '解决率_剔除R': 0.68,
+                    '评价量_剔除R': 7,
+                    '解决率总评价量_剔除R': 7,
+                    '已解决量_剔除R': 6
+                }
+            ];
+            
+            // 创建工作簿和工作表
+            const worksheet = XLSX.utils.json_to_sheet(templateData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, '数据模板');
+            
+            // 导出文件
+            XLSX.writeFile(workbook, `客服数据模板.xlsx`);
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', initEventListeners);
+    </script>
 </body>
 </html>
