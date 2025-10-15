@@ -1106,13 +1106,13 @@
             const thirdTierCount = parseInt(document.getElementById('newThirdTierCount').value);
             
             // 计算满意度影响值并排序
-           // 先计算所有新员工的"评价量_剔除R"总和
+            // 先计算所有新员工的"评价量_剔除R"总和
 const totalEvaluationCount = processedNewStaff.reduce((sum, staff) => {
     const evalCount = parseFloat(staff['评价量_剔除R']) || 0;
     return sum + evalCount;
 }, 0);
 
-// 计算并添加满意度影响值，然后排序
+// 计算并添加添加满意度影响值，然后排序
 let staffWithImpact = processedNewStaff.map(staff => {
     const satisfaction = parseFloat(staff['满意度_剔除R']) || 0;
     const evalCount = parseFloat(staff['评价量_剔除R']) || 0;
