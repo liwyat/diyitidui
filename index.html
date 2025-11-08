@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>优先级数据处理系统</title>
+    <title>优先级数据处理系统【本地处理工具，无任何上传云端数据】</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -103,7 +103,7 @@
             <div id="uploadArea" class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary transition-colors cursor-pointer">
                 <i class="fa fa-file-excel-o text-5xl text-gray-400 mb-4"></i>
                 <p class="text-gray-600 mb-2">拖拽Excel文件到此处，或点击上传</p>
-                <p class="text-gray-400 text-sm">支持 .xlsx 和 .xls 格式，需包含"新老员工"字段区分人员类型</p>
+                <p class="text-gray-400 text-sm">请确保导入时，已在右上角工具处理过原ext员工新老员工数据</p>
                 <input type="file" id="fileInput" accept=".xlsx,.xls" class="hidden" />
                 <button id="browseBtn" class="mt-4 px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all">
                     选择文件
@@ -172,6 +172,14 @@
                 </div>
             </div>
 
+            <!-- 部门梯队统计信息 -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold mb-2">部门梯队统计</h3>
+                <div id="departmentTierStatistics" class="space-y-4">
+                    <p class="text-gray-500">导入数据后显示部门统计信息</p>
+                </div>
+            </div>
+
             <!-- 功能按钮区域 -->
             <div class="mb-6 flex flex-wrap gap-4 justify-center">
                 <button id="jumpBtn" class="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-all shadow flex items-center">
@@ -207,7 +215,7 @@
                 
                 <!-- 老员工搜索和筛选 -->
                 <div class="p-6 bg-gray-50 border-b border-gray-100">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
                             <label class="block text-sm text-gray-600 mb-1">搜索 (ERP账号/姓名)</label>
                             <div class="relative">
@@ -217,7 +225,7 @@
                             </div>
                         </div>
                         <div>
-                            <label class="block text-sm text-gray-600 mb-1">部门筛选</label>
+                            <label class="block text-sm text-gray-600 mb-1">部门筛选（接待量降序）</label>
                             <select id="oldDeptFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50">
                                 <option value="">全部部门</option>
                                 <option value="1">SOHO运营四组京喜在线一组</option>
@@ -231,7 +239,7 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm text-gray-600 mb-1">梯队筛选</label>
+                            <label class="block text-sm text-gray-600 mb-1">梯队筛选（接待量降序）</label>
                             <select id="oldTierFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50">
                                 <option value="">全部梯队</option>
                                 <option value="1">第一梯队</option>
@@ -239,6 +247,19 @@
                                 <option value="3">第三梯队</option>
                             </select>
                         </div>
+                        <div>
+                <label class="block text-sm text-gray-600 mb-1">差异值筛选（筛选对应指标降序）</label>
+                <div class="flex gap-2">
+                    <input type="number" id="diffThreshold" value="5" min="1" max="100" 
+                        class="w-16 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50">
+                    <select id="diffTypeFilter" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50">
+                        <option value="">不筛选</option>
+                        <option value="satisfaction">满意度差异值</option>
+                        <option value="resolution">解决率差异值</option>
+                        <option value="evaluation">解决率总评价量差异值</option>
+                    </select>
+                </div>
+            </div>
                     </div>
                 </div>
                 
@@ -250,10 +271,6 @@
                             <i class="fa fa-bullseye mr-2"></i>
                             <span>按目标值计算</span>
                         </button>
-                        <button id="processByScoreBtn" class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all shadow flex items-center">
-                            <i class="fa fa-star mr-2"></i>
-                            <span>按分值计算</span>
-                        </button>
                     </div>
                     
                     <!-- 按目标值计算设置 -->
@@ -261,7 +278,7 @@
                         <h4 class="font-medium mb-4">目标值设置</h4>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm text-gray-600 mb-1">满意度_剔除R目标值（修改默认值联系@liguoping.26）</label>
+                                <label class="block text-sm text-gray-600 mb-1">满意度第一梯队目标值（修改默认值联系@liguoping.26）</label>
                                 <div class="relative">
                                     <input type="number" id="oldSatisfactionTarget" value="85.5" step="0.1" min="0" max="100" 
                                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 pr-10">
@@ -269,7 +286,7 @@
                                 </div>
                             </div>
                             <div>
-                                <label class="block text-sm text-gray-600 mb-1">解决率_剔除R目标值（修改默认值联系@liguoping.26）</label>
+                                <label class="block text-sm text-gray-600 mb-1">解决率第一梯队目标值（修改默认值联系@liguoping.26）</label>
                                 <div class="relative">
                                     <input type="number" id="oldResolutionTarget" value="72" step="0.1" min="0" max="100"
                                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 pr-10">
@@ -277,131 +294,35 @@
                                 </div>
                             </div>
                             <div>
-                                <label class="block text-sm text-gray-600 mb-1">评价量_剔除R样本量目标值（修改默认值联系@liguoping.26）</label>
+                                <label class="block text-sm text-gray-600 mb-1">满意度第三梯队门槛值（修改默认值联系@liguoping.26）</label>
+                                <div class="relative">
+                                    <input type="number" id="oldSatisfactionThreshold" value="77.5" step="0.1" min="0" max="100"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 pr-10">
+                                    <span class="absolute right-3 top-2 text-gray-500">%</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1">解决率第三梯队门槛值（修改默认值联系@liguoping.26）</label>
+                                <div class="relative">
+                                    <input type="number" id="oldResolutionThreshold" value="64" step="0.1" min="0" max="100"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 pr-10">
+                                    <span class="absolute right-3 top-2 text-gray-500">%</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1">评价量样本量目标值（修改默认值联系@liguoping.26）</label>
                                 <input type="number" id="oldEvaluationTarget" value="5" min="1"
                                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50">
                             </div>
                             <div>
-                                <label class="block text-sm text-gray-600 mb-1">解决率总评价量_剔除R样本量目标值（修改默认值联系@liguoping.26）</label>
+                                <label class="block text-sm text-gray-600 mb-1">解决率总评价量样本量目标值（低于此值直接划入第二梯队，修改默认值联系@liguoping.26）</label>
                                 <input type="number" id="oldResolutionEvaluationTarget" value="5" min="1"
                                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50">
                             </div>
                         </div>
                     </div>
                     
-                    <!-- 按分值计算设置 -->
-                    <div id="scoreSettings" class="hidden">
-                        <h4 class="font-medium mb-4">分值设置</h4>
-                        
-                        <div class="mb-6">
-                            <h5 class="font-medium mb-3 text-blue-600">满意度_剔除R 分值范围（修改默认值联系@liguoping.26）</h5>
-                            <div id="satisfactionScoreRanges">
-                                <div class="score-range-item grid grid-cols-1 md:grid-cols-3 gap-4 mb-3 p-3 bg-gray-50 rounded">
-                                    <div>
-                                        <label class="block text-sm text-gray-600 mb-1">最小值 (%)</label>
-                                        <input type="number" class="min-value w-full px-3 py-2 border border-gray-300 rounded-lg" value="85.5" step="0.1" min="0" max="100">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm text-gray-600 mb-1">最大值 (%)</label>
-                                        <input type="number" class="max-value w-full px-3 py-2 border border-gray-300 rounded-lg" value="100" step="0.1" min="0" max="100">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm text-gray-600 mb-1">分值</label>
-                                        <input type="number" class="score w-full px-3 py-2 border border-gray-300 rounded-lg" value="1" min="1">
-                                    </div>
-                                </div>
-                                <div class="score-range-item grid grid-cols-1 md:grid-cols-3 gap-4 mb-3 p-3 bg-gray-50 rounded">
-                                    <div>
-                                        <label class="block text-sm text-gray-600 mb-1">最小值 (%)</label>
-                                        <input type="number" class="min-value w-full px-3 py-2 border border-gray-300 rounded-lg" value="77" step="0.1" min="0" max="100">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm text-gray-600 mb-1">最大值 (%)</label>
-                                        <input type="number" class="max-value w-full px-3 py-2 border border-gray-300 rounded-lg" value="85.5" step="0.1" min="0" max="100">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm text-gray-600 mb-1">分值</label>
-                                        <input type="number" class="score w-full px-3 py-2 border border-gray-300 rounded-lg" value="2" min="1">
-                                    </div>
-                                </div>
-                                <div class="score-range-item grid grid-cols-1 md:grid-cols-3 gap-4 mb-3 p-3 bg-gray-50 rounded">
-                                    <div>
-                                        <label class="block text-sm text-gray-600 mb-1">最小值 (%)</label>
-                                        <input type="number" class="min-value w-full px-3 py-2 border border-gray-300 rounded-lg" value="0" step="0.1" min="0" max="100">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm text-gray-600 mb-1">最大值 (%)</label>
-                                        <input type="number" class="max-value w-full px-3 py-2 border border-gray-300 rounded-lg" value="77" step="0.1" min="0" max="100">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm text-gray-600 mb-1">分值</label>
-                                        <input type="number" class="score w-full px-3 py-2 border border-gray-300 rounded-lg" value="3" min="1">
-                                    </div>
-                                </div>
-                            </div>
-                            <button id="addSatisfactionRange" class="mt-2 px-4 py-1 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm transition-all">
-                                <i class="fa fa-plus mr-1"></i> 添加范围
-                            </button>
-                        </div>
-                        
-                        <div>
-                            <h5 class="font-medium mb-3 text-green-600">解决率_剔除R 分值范围（修改默认值联系@liguoping.26）</h5>
-                            <div id="resolutionScoreRanges">
-                                <div class="score-range-item grid grid-cols-1 md:grid-cols-3 gap-4 mb-3 p-3 bg-gray-50 rounded">
-                                    <div>
-                                        <label class="block text-sm text-gray-600 mb-1">最小值 (%)</label>
-                                        <input type="number" class="min-value w-full px-3 py-2 border border-gray-300 rounded-lg" value="72" step="0.1" min="0" max="100">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm text-gray-600 mb-1">最大值 (%)</label>
-                                        <input type="number" class="max-value w-full px-3 py-2 border border-gray-300 rounded-lg" value="100" step="0.1" min="0" max="100">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm text-gray-600 mb-1">分值</label>
-                                        <input type="number" class="score w-full px-3 py-2 border border-gray-300 rounded-lg" value="1" min="1">
-                                    </div>
-                                </div>
-                                <div class="score-range-item grid grid-cols-1 md:grid-cols-3 gap-4 mb-3 p-3 bg-gray-50 rounded">
-                                    <div>
-                                        <label class="block text-sm text-gray-600 mb-1">最小值 (%)</label>
-                                        <input type="number" class="min-value w-full px-3 py-2 border border-gray-300 rounded-lg" value="65" step="0.1" min="0" max="100">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm text-gray-600 mb-1">最大值 (%)</label>
-                                        <input type="number" class="max-value w-full px-3 py-2 border border-gray-300 rounded-lg" value="72" step="0.1" min="0" max="100">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm text-gray-600 mb-1">分值</label>
-                                        <input type="number" class="score w-full px-3 py-2 border border-gray-300 rounded-lg" value="2" min="1">
-                                    </div>
-                                </div>
-                                <div class="score-range-item grid grid-cols-1 md:grid-cols-3 gap-4 mb-3 p-3 bg-gray-50 rounded">
-                                    <div>
-                                        <label class="block text-sm text-gray-600 mb-1">最小值 (%)</label>
-                                        <input type="number" class="min-value w-full px-3 py-2 border border-gray-300 rounded-lg" value="0" step="0.1" min="0" max="100">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm text-gray-600 mb-1">最大值 (%)</label>
-                                        <input type="number" class="max-value w-full px-3 py-2 border border-gray-300 rounded-lg" value="65" step="0.1" min="0" max="100">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm text-gray-600 mb-1">分值</label>
-                                        <input type="number" class="score w-full px-3 py-2 border border-gray-300 rounded-lg" value="3" min="1">
-                                    </div>
-                                </div>
-                            </div>
-                            <button id="addResolutionRange" class="mt-2 px-4 py-1 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm transition-all">
-                                <i class="fa fa-plus mr-1"></i> 添加范围
-                            </button>
-                        </div>
-                        
-                        <div class="mt-4">
-                            <label class="block text-sm text-gray-600 mb-1">第二梯队评价量阈值（修改默认值联系@liguoping.26）</label>
-                            <input type="number" id="secondTierEvaluationThreshold" value="5" min="1"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50">
-                            <p class="text-xs text-gray-500 mt-1">评价量_剔除R或已解决量_剔除R任一值低于此值，均为第二梯队</p>
-                        </div>
-                    </div>
+                    <!-- 按目标值计算设置已完成 -->
                 </div>
                 
                 <!-- 老员工结果 -->
@@ -414,6 +335,7 @@
                             第三梯队: <span id="oldThirdTierCount" class="text-danger font-medium">0</span>
                             <span class="mx-1">|</span>
                             总计: <span id="oldTotalCount" class="font-medium">0</span>
+                            <span class="ml-2 text-xs text-gray-400">(跟随筛选)</span>
                         </div>
                     </div>
                     
@@ -511,16 +433,16 @@
                     <h3 class="font-medium mb-4">目标值设置</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm text-gray-600 mb-1">满意度_剔除R目标值</label>
+                            <label class="block text-sm text-gray-600 mb-1">新人影响值计算满意度目标值（修改默认值联系@liguoping.26）</label>
                             <div class="relative">
-                                <input type="number" id="newSatisfactionTarget" value="83.5" step="0.1" min="0" max="100"
+                                <input type="number" id="newSatisfactionTarget" value="82.5" step="0.1" min="0" max="100"
                                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 pr-10">
                                 <span class="absolute right-3 top-2 text-gray-500">%</span>
                             </div>
                             <p class="text-xs text-gray-500 mt-1">用于计算满意度影响值的基准值</p>
                         </div>
                         <div>
-                            <label class="block text-sm text-gray-600 mb-1">解决率_剔除R目标值</label>
+                            <label class="block text-sm text-gray-600 mb-1">解决率目标值（暂不考核）</label>
                             <div class="relative">
                                 <input type="number" id="newResolutionTarget" value="70" step="0.1" min="0" max="100"
                                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 pr-10">
@@ -555,6 +477,7 @@
                             第三梯队: <span id="newThirdTierCountDisplay" class="text-danger font-medium">0</span>
                             <span class="mx-1">|</span>
                             总计: <span id="newTotalCount" class="font-medium">0</span>
+                            <span class="ml-2 text-xs text-gray-400">(跟随筛选)</span>
                         </div>
                     </div>
                     
@@ -614,7 +537,7 @@
             </div>
             <div class="p-6">
                 <h4 class="font-medium mb-2">1. 导入数据</h4>
-                <p class="text-gray-600 mb-4">导出数据时请选择原表格式-全量数据，点击"选择文件"按钮或拖拽Excel文件到上传区域，系统支持.xlsx和.xls格式文件。Excel必须包含"新老员工"字段用于区分人员类型，可填写"老员工"或"新员工"。满意度和解决率应为小数形式（如0.8835表示88.35%）。</p>
+                <p class="text-gray-600 mb-4">导出数据时请选择原表格式-对应梯队计算周期的数据，点击"选择文件"按钮或拖拽Excel文件到上传区域，系统支持.xlsx和.xls格式文件。Excel必须包含"新老员工"字段用于区分人员类型，且完成ext人员转换。表头需与模板一致。</p>
                 
                 <h4 class="font-medium mb-2">2. 数据查询与筛选</h4>
                 <ul class="text-gray-600 list-disc pl-5 mb-4">
@@ -624,10 +547,16 @@
                     <li>筛选后的数据会实时更新，导出功能也会只导出筛选后的数据</li>
                 </ul>
                 
-                <h4 class="font-medium mb-2">3. 老员工数据计算方式</h4>
+                <h4 class="font-medium mb-2">3. 新老员工数据计算方式</h4>
                 <ul class="text-gray-600 list-disc pl-5 mb-4">
-                    <li><strong>按目标值计算</strong>：根据设定的目标值判断是否为第一梯队</li>
-                    <li><strong>按分值计算</strong>：根据分值范围计算总分值，再根据总分值划分梯队</li>
+                    <li><strong>老员工：按目标值计算</strong>：
+                    <li>第一梯队：IM满意度和解决率均达到挑战值就是第一梯队</li>
+                    <li>第三梯队：2个指标均未达成门槛值或者1个没达到门槛且另1个指标没达到挑战值</li>
+                    <li>第二梯队：非第一梯队和第三梯队的人都是第二梯队</li>
+                    <li><strong>新员工：按影响值排名计算</strong>：
+                    <li>第一梯队：影响值新人排名前100就是第一梯队</li>
+                    <li>第三梯队：影响值新人排名倒数50就是第三梯队</li>
+                    <li>第二梯队：非第一梯队和第三梯队的人都是第二梯队</li>
                 </ul>
                 
                 <h4 class="font-medium mb-2">4. 分页浏览</h4>
@@ -646,7 +575,7 @@
     </div>
 
     <!-- 临时图片导出容器 (隐藏) -->
-    <div id="imageExportContainer" class="hidden fixed top-0 left-0 z-50 bg-white p-8"></div>
+    <div id="imageExportContainer" class="hidden absolute opacity-0 z-[-1] pointer-events-none"></div>
 
     <!-- 页脚 -->
     <footer class="bg-dark text-white py-6">
@@ -689,13 +618,7 @@
         const helpModal = document.getElementById('helpModal');
         const closeHelpBtn = document.getElementById('closeHelpBtn');
         const processByTargetBtn = document.getElementById('processByTargetBtn');
-        const processByScoreBtn = document.getElementById('processByScoreBtn');
         const targetSettings = document.getElementById('targetSettings');
-        const scoreSettings = document.getElementById('scoreSettings');
-        const addSatisfactionRangeBtn = document.getElementById('addSatisfactionRange');
-        const addResolutionRangeBtn = document.getElementById('addResolutionRange');
-        const satisfactionScoreRanges = document.getElementById('satisfactionScoreRanges');
-        const resolutionScoreRanges = document.getElementById('resolutionScoreRanges');
         const processNewStaffBtn = document.getElementById('processNewStaffBtn');
         const oldStaffSearch = document.getElementById('oldStaffSearch');
         const newStaffSearch = document.getElementById('newStaffSearch');
@@ -703,6 +626,8 @@
         const newDeptFilter = document.getElementById('newDeptFilter');
         const oldTierFilter = document.getElementById('oldTierFilter');
         const newTierFilter = document.getElementById('newTierFilter');
+        const diffThreshold = document.getElementById('diffThreshold');
+        const diffTypeFilter = document.getElementById('diffTypeFilter');
         const oldStaffSection = document.getElementById('oldStaffSection');
         const newStaffSection = document.getElementById('newStaffSection');
         const imageExportContainer = document.getElementById('imageExportContainer');
@@ -736,8 +661,46 @@
 
         // 初始化事件监听
         function initEventListeners() {
+            console.log('初始化事件监听器...');
+            
+            // 重新获取元素以确保它们存在
+            const browseBtnElement = document.getElementById('browseBtn');
+            const fileInputElement = document.getElementById('fileInput');
+            
+            console.log('browseBtn元素:', browseBtnElement);
+            console.log('fileInput元素:', fileInputElement);
+            
             // 文件上传相关
-            browseBtn.addEventListener('click', () => fileInput.click());
+            if (browseBtnElement && fileInputElement) {
+                // 先移除可能存在的旧事件监听器
+                browseBtnElement.onclick = null;
+                
+                // 添加新的事件监听器
+                browseBtnElement.addEventListener('click', function(event) {
+                    event.stopPropagation();
+                    console.log('点击了选择文件按钮');
+                    // 使用try-catch确保代码执行不中断
+                    try {
+                        fileInputElement.click();
+                        console.log('成功触发fileInput.click()');
+                    } catch (error) {
+                        console.error('触发fileInput.click()失败:', error);
+                    }
+                });
+                
+                // 确保uploadArea也能正常工作
+                const uploadAreaElement = document.getElementById('uploadArea');
+                if (uploadAreaElement) {
+                    uploadAreaElement.addEventListener('click', function(event) {
+                        // 只有当点击的是uploadArea本身而不是其子元素时才触发
+                        if (event.target === uploadAreaElement || event.target === uploadAreaElement.querySelector('p') || event.target === uploadAreaElement.querySelector('i')) {
+                            fileInputElement.click();
+                        }
+                    });
+                }
+            } else {
+                console.error('未找到browseBtn或fileInput元素');
+            }
             fileInput.addEventListener('change', handleFileUpload);
             uploadArea.addEventListener('dragover', handleDragOver);
             uploadArea.addEventListener('drop', handleDrop);
@@ -747,20 +710,10 @@
             processByTargetBtn.addEventListener('click', () => {
                 oldCalculationMethod = 'target';
                 targetSettings.classList.remove('hidden');
-                scoreSettings.classList.add('hidden');
                 processOldStaffByTarget();
             });
             
-            processByScoreBtn.addEventListener('click', () => {
-                oldCalculationMethod = 'score';
-                targetSettings.classList.add('hidden');
-                scoreSettings.classList.remove('hidden');
-                processOldStaffByScore();
-            });
-            
-            // 添加分值范围
-            addSatisfactionRangeBtn.addEventListener('click', () => addScoreRange('satisfaction'));
-            addResolutionRangeBtn.addEventListener('click', () => addScoreRange('resolution'));
+            // 按目标值计算已设置为唯一计算方式
             
             // 处理按钮
             processNewStaffBtn.addEventListener('click', processNewStaff);
@@ -780,21 +733,25 @@
                 oldCurrentPage = 1; // 重置为第一页
                 filterOldStaff();
             });
-            newStaffSearch.addEventListener('input', () => {
-                newCurrentPage = 1; // 重置为第一页
-                filterNewStaff();
-            });
             oldDeptFilter.addEventListener('change', () => {
+                oldCurrentPage = 1; // 重置为第一页
+                filterOldStaff();
+            });
+            oldTierFilter.addEventListener('change', () => {
+                oldCurrentPage = 1; // 重置为第一页
+                filterOldStaff();
+            });
+            diffThreshold.addEventListener('change', () => {
+                oldCurrentPage = 1; // 重置为第一页
+                filterOldStaff();
+            });
+            diffTypeFilter.addEventListener('change', () => {
                 oldCurrentPage = 1; // 重置为第一页
                 filterOldStaff();
             });
             newDeptFilter.addEventListener('change', () => {
                 newCurrentPage = 1; // 重置为第一页
                 filterNewStaff();
-            });
-            oldTierFilter.addEventListener('change', () => {
-                oldCurrentPage = 1; // 重置为第一页
-                filterOldStaff();
             });
             newTierFilter.addEventListener('change', () => {
                 newCurrentPage = 1; // 重置为第一页
@@ -852,8 +809,10 @@
 
         // 处理文件上传
         function handleFileUpload(e) {
+            console.log('文件选择事件触发');
             const file = e.target.files[0];
             if (file) {
+                console.log('选择的文件:', file.name);
                 processFile(file);
             }
         }
@@ -919,57 +878,175 @@
 
         // 处理所有数据 - 根据"新老员工"字段区分
         function processAllData() {
-            // 根据"新老员工"字段区分，支持"老员工"、"新员工"两种值
-            processedOldStaff = originalData.filter(item => 
+            // 首先区分原始的老员工和新员工数据
+            const originalOldStaff = originalData.filter(item => 
                 item['新老员工'] && item['新老员工'].toString().trim() === '老员工'
             );
-            processedNewStaff = originalData.filter(item => 
+            const originalNewStaff = originalData.filter(item => 
                 item['新老员工'] && item['新老员工'].toString().trim() === '新员工'
             );
+            
+            // 创建新员工ERP账号到数据的映射，用于快速查找
+            const newStaffMap = new Map();
+            originalNewStaff.forEach(item => {
+                if (item['ERP账号']) {
+                    newStaffMap.set(item['ERP账号'], item);
+                }
+            });
+            
+            // 处理老员工数据，合并同一ERP账号的新老员工数据
+            processedOldStaff = originalOldStaff.map(oldStaff => {
+                const erp = oldStaff['ERP账号'];
+                // 如果老员工的ERP账号在新员工中有对应数据，则合并
+                if (erp && newStaffMap.has(erp)) {
+                    const newStaff = newStaffMap.get(erp);
+                    // 复制老员工数据作为基础
+                    const mergedStaff = { ...oldStaff };
+                    
+                    // 合并数值型数据（求和）
+                    // 接待量
+                    if (newStaff['接待量'] !== undefined && oldStaff['接待量'] !== undefined) {
+                        mergedStaff['接待量'] = (parseFloat(oldStaff['接待量']) || 0) + (parseFloat(newStaff['接待量']) || 0);
+                    }
+                    // 满意量_剔除R
+                    if (newStaff['满意量_剔除R'] !== undefined && oldStaff['满意量_剔除R'] !== undefined) {
+                        mergedStaff['满意量_剔除R'] = (parseFloat(oldStaff['满意量_剔除R']) || 0) + (parseFloat(newStaff['满意量_剔除R']) || 0);
+                    }
+                    // 评价量_剔除R
+                    if (newStaff['评价量_剔除R'] !== undefined && oldStaff['评价量_剔除R'] !== undefined) {
+                        mergedStaff['评价量_剔除R'] = (parseFloat(oldStaff['评价量_剔除R']) || 0) + (parseFloat(newStaff['评价量_剔除R']) || 0);
+                    }
+                    // 已解决量_剔除R
+                    if (newStaff['已解决量_剔除R'] !== undefined && oldStaff['已解决量_剔除R'] !== undefined) {
+                        mergedStaff['已解决量_剔除R'] = (parseFloat(oldStaff['已解决量_剔除R']) || 0) + (parseFloat(newStaff['已解决量_剔除R']) || 0);
+                    }
+                    // 解决率总评价量_剔除R
+                    if (newStaff['解决率总评价量_剔除R'] !== undefined && oldStaff['解决率总评价量_剔除R'] !== undefined) {
+                        mergedStaff['解决率总评价量_剔除R'] = (parseFloat(oldStaff['解决率总评价量_剔除R']) || 0) + (parseFloat(newStaff['解决率总评价量_剔除R']) || 0);
+                    }
+                    
+                    // 重新计算满意度：满意量之和/评价量之和
+                    const totalSatisfactionCount = parseFloat(mergedStaff['满意量_剔除R']) || 0;
+                    const totalEvaluationCount = parseFloat(mergedStaff['评价量_剔除R']) || 0;
+                    if (totalEvaluationCount > 0) {
+                        mergedStaff['满意度_剔除R'] = totalSatisfactionCount / totalEvaluationCount;
+                    }
+                    
+                    // 重新计算解决率：已解决量之和/解决率总评价量之和
+                    const totalResolvedCount = parseFloat(mergedStaff['已解决量_剔除R']) || 0;
+                    const totalResolutionEvaluationCount = parseFloat(mergedStaff['解决率总评价量_剔除R']) || 0;
+                    if (totalResolutionEvaluationCount > 0) {
+                        mergedStaff['解决率_剔除R'] = totalResolvedCount / totalResolutionEvaluationCount;
+                    }
+                    
+                    // 标记为已合并数据
+                    mergedStaff['isMergedData'] = true;
+                    
+                    return mergedStaff;
+                }
+                return oldStaff;
+            });
+            
+            // 筛选出新员工中不与老员工ERP账号重复的数据
+            processedNewStaff = originalNewStaff.filter(item => {
+                const erp = item['ERP账号'];
+                // 如果新员工的ERP账号在老员工中存在，则不保留该新员工数据
+                return !erp || !originalOldStaff.some(oldStaff => oldStaff['ERP账号'] === erp);
+            });
             
             // 初始化部门筛选器
             initDepartmentFilters();
             
             // 计算统计信息
             updateStatistics();
+            // 更新部门梯队统计
+            updateDepartmentTierStatistics();
+            
+            // 自动处理新员工数据，无需手动点击
+            processNewStaff();
         }
 
         // 按目标值处理老员工数据
         function processOldStaffByTarget() {
             const satisfactionTarget = parseFloat(document.getElementById('oldSatisfactionTarget').value) / 100;
             const resolutionTarget = parseFloat(document.getElementById('oldResolutionTarget').value) / 100;
+            const satisfactionThreshold = parseFloat(document.getElementById('oldSatisfactionThreshold').value) / 100;
+            const resolutionThreshold = parseFloat(document.getElementById('oldResolutionThreshold').value) / 100;
             const evaluationTarget = parseInt(document.getElementById('oldEvaluationTarget').value);
             const resolutionEvaluationTarget = parseInt(document.getElementById('oldResolutionEvaluationTarget').value);
             
             processedOldStaff = processedOldStaff.map(staff => {
-                // 计算是否达到各项目标
-                const satisfaction达标 = staff['满意度_剔除R'] >= satisfactionTarget;
-                const resolution达标 = staff['解决率_剔除R'] >= resolutionTarget;
-                const evaluation达标 = staff['评价量_剔除R'] >= evaluationTarget;
-                const resolutionEvaluation达标 = staff['解决率总评价量_剔除R'] >= resolutionEvaluationTarget;
+                // 将数值转换为整数（接待量、满意量_剔除R、评价量_剔除R、已解决量_剔除R）
+                // 确保所有数值都被正确转换为整数，不保留小数点
+                if (staff['接待量'] !== undefined) staff['接待量'] = Math.floor(parseFloat(staff['接待量']) || 0);
+                if (staff['满意量_剔除R'] !== undefined) staff['满意量_剔除R'] = Math.floor(parseFloat(staff['满意量_剔除R']) || 0);
+                if (staff['评价量_剔除R'] !== undefined) staff['评价量_剔除R'] = Math.floor(parseFloat(staff['评价量_剔除R']) || 0);
+                if (staff['已解决量_剔除R'] !== undefined) staff['已解决量_剔除R'] = Math.floor(parseFloat(staff['已解决量_剔除R']) || 0);
                 
-                // 判断是否为第一梯队
-                const isFirstTier = satisfaction达标 && resolution达标 && evaluation达标 && resolutionEvaluation达标;
+                // 计算是否达到各项目标（完善空值处理和精度比较）
+                const satisfactionValue = staff['满意度_剔除R'] || 0;
+                const resolutionValue = staff['解决率_剔除R'] || 0;
+                const satisfactionEvaluation = staff['评价量_剔除R'] || 0;
+                const resolutionEvaluation = staff['解决率总评价量_剔除R'] || 0;
                 
-                // 计算差距
-                const satisfaction差距 = satisfactionTarget - staff['满意度_剔除R'];
-                const resolution差距 = resolutionTarget - staff['解决率_剔除R'];
-                const evaluation差距 = evaluationTarget - staff['评价量_剔除R'];
-                const resolutionEvaluation差距 = resolutionEvaluationTarget - staff['解决率总评价量_剔除R'];
+                // 使用更精确的达标判断，确保等于目标值时也能正确识别
+                const satisfaction达标 = Math.abs(satisfactionValue - satisfactionTarget) < 0.00001 || satisfactionValue > satisfactionTarget;
+                const resolution达标 = Math.abs(resolutionValue - resolutionTarget) < 0.00001 || resolutionValue > resolutionTarget;
+                const satisfaction未达门槛 = satisfactionValue < satisfactionThreshold;
+                const resolution未达门槛 = resolutionValue < resolutionThreshold;
+                const evaluation达标 = satisfactionEvaluation >= evaluationTarget;
+                const resolutionEvaluation达标 = resolutionEvaluation >= resolutionEvaluationTarget;
                 
-                // 计算未达原因
+                // 优化后的梯队判断逻辑
+                // 优先级最高：解决率总评价量_剔除R小于5直接划入第二梯队
+                const isLowEvaluation = resolutionEvaluation < 5;
+                
+                // 梯队判断逻辑
+                // 满意度和解决率均大于等于目标值且不是低评价量的员工才能进入第一梯队
+                const isFirstTier = !isLowEvaluation && satisfaction达标 && resolution达标;
+                // 2项指标均小于门槛值且不是低评价量的员工进入第三梯队
+                const isThirdTier = !isLowEvaluation && satisfaction未达门槛 && resolution未达门槛;
+                // 首先检查是否因评价量少直接划入第二梯队，或者不属于第一梯队和第三梯队
+                const isSecondTier = isLowEvaluation || (!isFirstTier && !isThirdTier);
+                
+                // 确定最终梯队
+                const tier = isFirstTier ? 1 : (isThirdTier ? 3 : 2);
+                
+                // 计算差距（达标时留空）
+                const satisfaction差距 = satisfaction达标 ? '' : satisfactionTarget - staff['满意度_剔除R'];
+                const resolution差距 = resolution达标 ? '' : resolutionTarget - staff['解决率_剔除R'];
+                const evaluation差距 = evaluation达标 ? '' : evaluationTarget - staff['评价量_剔除R'];
+                const resolutionEvaluation差距 = resolutionEvaluation达标 ? '' : resolutionEvaluationTarget - staff['解决率总评价量_剔除R'];
+                
+                // 计算差异量（达标时留空）
+                let satisfaction差异量 = '';
+                let resolution差异量 = '';
+                
+                // 只有未达标时才计算差异量
+                if (!satisfaction达标 && 1 - satisfactionTarget !== 0) {
+                    // 满意度差异量 = 评价量_剔除R × (满意度_剔除R目标值 - 满意度_剔除R) ÷ (1 - 满意度_剔除R目标值)
+                    satisfaction差异量 = Math.round(staff['评价量_剔除R'] * (satisfactionTarget - staff['满意度_剔除R']) / (1 - satisfactionTarget));
+                }
+                
+                // 只有未达标时才计算差异量
+                if (!resolution达标 && 1 - resolutionTarget !== 0) {
+                    // 解决率差异量 = 解决率总评价量_剔除R × (解决率_剔除R目标值 - 解决率_剔除R) ÷ (1 - 解决率_剔除R目标值)
+                    resolution差异量 = Math.round(staff['解决率总评价量_剔除R'] * (resolutionTarget - staff['解决率_剔除R']) / (1 - resolutionTarget));
+                }
+                
+                // 计算未达原因（保持原有逻辑）
                 const reasons = [];
-                if (!satisfaction达标) reasons.push(`满意度_剔除R未达标 (差距: ${(satisfaction差距 * 100).toFixed(1)}%)`);
-                if (!resolution达标) reasons.push(`解决率_剔除R未达标 (差距: ${(resolution差距 * 100).toFixed(1)}%)`);
-                if (!evaluation达标) reasons.push(`评价量_剔除R未达标 (差距: ${evaluation差距})`);
-                if (!resolutionEvaluation达标) reasons.push(`解决率总评价量_剔除R未达标 (差距: ${resolutionEvaluation差距})`);
+                if (!satisfaction达标) reasons.push(`满意度未达标 (差距: ${(satisfaction差距 * 100).toFixed(1)}%, 差异量: ${satisfaction差异量})`);
+                if (!resolution达标) reasons.push(`解决率未达标 (差距: ${(resolution差距 * 100).toFixed(1)}%, 差异量: ${resolution差异量})`);
+                if (!evaluation达标) reasons.push(`评价量未达标 (差距: ${evaluation差距})`);
+                if (!resolutionEvaluation达标) reasons.push(`解决率总评价量未达标 (差距: ${resolutionEvaluation差距})`);
                 
                 return {
                     ...staff,
                     isFirstTier,
-                    isSecondTier: !isFirstTier,
-                    isThirdTier: false,
-                    tier: isFirstTier ? 1 : 2,
+                    isSecondTier,
+                    isThirdTier,
+                    tier,
                     未达标项: {
                         satisfaction: !satisfaction达标,
                         resolution: !resolution达标,
@@ -982,6 +1059,8 @@
                         evaluation: evaluation差距,
                         resolutionEvaluation: resolutionEvaluation差距
                     },
+                    满意度差异量: satisfaction差异量,
+                    解决率差异量: resolution差异量,
                     非第一梯队原因: reasons.join('; ')
                 };
             });
@@ -990,113 +1069,10 @@
             filterOldStaff();
             updateOldStaffTable();
             updateStatistics();
+            updateDepartmentTierStatistics();
         }
 
-        // 按分值处理老员工数据
-        function processOldStaffByScore() {
-            // 获取分值范围配置
-            const satisfactionRanges = getScoreRanges('satisfaction');
-            const resolutionRanges = getScoreRanges('resolution');
-            const evaluationThreshold = parseInt(document.getElementById('secondTierEvaluationThreshold').value);
-            
-    processedOldStaff = processedOldStaff.map(staff => {
-        // 计算满意度得分
-        const satisfactionScore = getScoreForValue(
-            staff['满意度_剔除R'] * 100, // 转换为百分比
-            satisfactionRanges
-        );
-        
-        // 计算解决率得分
-        const resolutionScore = getScoreForValue(
-            staff['解决率_剔除R'] * 100, // 转换为百分比
-            resolutionRanges
-        );
-        
-        // 计算总分
-        const totalScore = satisfactionScore + resolutionScore;
-        
-        // 判断评价量是否低于阈值（新增解决率总评价量判断）
-        const evaluationBelowThreshold = 
-            staff['评价量_剔除R'] < evaluationThreshold || 
-            staff['解决率总评价量_剔除R'] < evaluationThreshold;
-        
-        // 确定梯队 - 按新规则判断
-        let tier = 2; // 默认第二梯队
-        
-        // 评价量或解决率总评价量低于阈值，直接划入第二梯队（优先级最高）
-        if (evaluationBelowThreshold) {
-            tier = 2;
-        }
-        // 总分=5或6为第三梯队
-        else if (totalScore === 5 || totalScore === 6) {
-            tier = 3;
-        }
-        // 总分=2为第一梯队
-        else if (totalScore === 2) {
-            tier = 1;
-        }
-        // 其他情况为第二梯队
-        else {
-            tier = 2;
-        }
-        
-        // 计算未达第一梯队原因
-        const reasons = [];
-        if (tier !== 1) {
-            if (totalScore === 5 || totalScore === 6) reasons.push(`总分${totalScore}分，属于第三梯队`);
-            if (evaluationBelowThreshold) reasons.push('评价量或解决率总评价量低于阈值（5）');
-            if (tier === 2 && !evaluationBelowThreshold && !(totalScore === 5 || totalScore === 6)) {
-                reasons.push(`总分${totalScore}分，不符合第一梯队条件`);
-            }
-            if (reasons.length === 0) reasons.push('不符合第一梯队条件');
-        }
-        
-        return {
-            ...staff,
-            satisfactionScore,
-            resolutionScore,
-            totalScore,
-            isFirstTier: tier === 1,
-            isSecondTier: tier === 2,
-            isThirdTier: tier === 3,
-            tier,
-            非第一梯队原因: reasons.join('; ')
-        };
-    });
-    
-    // 筛选并更新表格
-    filterOldStaff();
-    updateOldStaffTable();
-    updateStatistics();
-}
-
-        // 获取分值范围配置
-        function getScoreRanges(type) {
-            const container = type === 'satisfaction' ? satisfactionScoreRanges : resolutionScoreRanges;
-            const items = container.getElementsByClassName('score-range-item');
-            const ranges = [];
-            
-            for (let item of items) {
-                const min = parseFloat(item.querySelector('.min-value').value);
-                const max = parseFloat(item.querySelector('.max-value').value);
-                const score = parseInt(item.querySelector('.score').value);
-                
-                ranges.push({ min, max, score });
-            }
-            
-            return ranges;
-        }
-
-        // 根据值获取对应的分数
-        function getScoreForValue(value, ranges) {
-            // 查找匹配的范围
-            for (let range of ranges) {
-                if (value >= range.min && value <= range.max) {
-                    return range.score;
-                }
-            }
-            return 0; // 默认分数
-        }
+        // 已删除按分值计算相关函数
 
         // 处理新员工数据
         function processNewStaff() {
@@ -1165,6 +1141,7 @@ let staffWithImpact = processedNewStaff.map(staff => {
             filterNewStaff();
             updateNewStaffTable();
             updateStatistics();
+            updateDepartmentTierStatistics();
         }
 
         // 初始化部门筛选器
@@ -1202,8 +1179,11 @@ let staffWithImpact = processedNewStaff.map(staff => {
             const searchTerm = oldStaffSearch.value.toLowerCase();
             const deptFilter = oldDeptFilter.value;
             const tierFilter = oldTierFilter.value;
+            const diffThreshold = parseInt(document.getElementById('diffThreshold').value);
+            const diffTypeFilter = document.getElementById('diffTypeFilter').value;
             
-            oldStaffFiltered = processedOldStaff.filter(staff => {
+            // 先进行基础筛选
+            let filtered = processedOldStaff.filter(staff => {
                 // 搜索筛选
                 const matchesSearch = 
                     (!searchTerm) || 
@@ -1219,10 +1199,73 @@ let staffWithImpact = processedNewStaff.map(staff => {
                 return matchesSearch && matchesDept && matchesTier;
             });
             
+            // 差异值筛选
+            if (diffTypeFilter) {
+                // 根据差异类型筛选出有差异值且其他两个指标达标的员工
+                if (diffTypeFilter === 'satisfaction') {
+                    // 筛选满意度差异值，且解决率_剔除R、解决率总评价量_剔除R均达标
+                    filtered = filtered.filter(s => {
+                        // 必须有满意度差异值且满足阈值条件
+                        const hasSatisfactionDiff = s['满意度差异量'] !== '' && 
+                                                 typeof s['满意度差异量'] === 'number' && 
+                                                 s['满意度差异量'] <= diffThreshold;
+                        
+                        // 解决率必须达标：差异量为空字符串表示达标
+                        const resolution达标 = s['解决率差异量'] === '';
+                        
+                        // 解决率总评价量必须达标：差距值为空字符串表示达标
+                        const resolutionEvaluation达标 = (!s['差距值'] || 
+                                                         !s['差距值']['resolutionEvaluation'] || 
+                                                         s['差距值']['resolutionEvaluation'] === '');
+                        
+                        return hasSatisfactionDiff && resolution达标 && resolutionEvaluation达标;
+                    }).sort((a, b) => (b['满意度_剔除R'] || 0) - (a['满意度_剔除R'] || 0));
+                } else if (diffTypeFilter === 'resolution') {
+                    // 筛选解决率差异值，且满意度_剔除R、解决率总评价量_剔除R均达标
+                    filtered = filtered.filter(s => {
+                        // 必须有解决率差异值且满足阈值条件
+                        const hasResolutionDiff = s['解决率差异量'] !== '' && 
+                                                 typeof s['解决率差异量'] === 'number' && 
+                                                 s['解决率差异量'] <= diffThreshold;
+                        
+                        // 满意度必须达标：差异量为空字符串表示达标
+                        const satisfaction达标 = s['满意度差异量'] === '';
+                        
+                        // 解决率总评价量必须达标：差距值为空字符串表示达标
+                        const resolutionEvaluation达标 = (!s['差距值'] || 
+                                                         !s['差距值']['resolutionEvaluation'] || 
+                                                         s['差距值']['resolutionEvaluation'] === '');
+                        
+                        return hasResolutionDiff && satisfaction达标 && resolutionEvaluation达标;
+                    }).sort((a, b) => (b['解决率_剔除R'] || 0) - (a['解决率_剔除R'] || 0));
+                } else if (diffTypeFilter === 'evaluation') {
+                    // 筛选解决率总评价量差异值，且满意度_剔除R、解决率_剔除R均达标
+                    filtered = filtered.filter(s => {
+                        // 必须有解决率总评价量差异值且满足阈值条件
+                        const hasEvaluationDiff = s['差距值'] && 
+                                                 s['差距值']['resolutionEvaluation'] !== '' && 
+                                                 typeof s['差距值']['resolutionEvaluation'] === 'number' && 
+                                                 s['差距值']['resolutionEvaluation'] <= diffThreshold;
+                        
+                        // 满意度必须达标：差异量为空字符串表示达标
+                        const satisfaction达标 = s['满意度差异量'] === '';
+                        
+                        // 解决率必须达标：差异量为空字符串表示达标
+                        const resolution达标 = s['解决率差异量'] === '';
+                        
+                        return hasEvaluationDiff && satisfaction达标 && resolution达标;
+                    }).sort((a, b) => (b['解决率总评价量_剔除R'] || 0) - (a['解决率总评价量_剔除R'] || 0));
+                }
+            }
+            
+            oldStaffFiltered = filtered;
+            
             // 更新分页
             updateOldPagination();
             // 更新表格
             updateOldStaffTable();
+            // 更新统计信息
+            updateOldStaffStatistics();
         }
 
         // 筛选新员工数据
@@ -1251,6 +1294,8 @@ let staffWithImpact = processedNewStaff.map(staff => {
             updateNewPagination();
             // 更新表格
             updateNewStaffTable();
+            // 更新统计信息
+            updateNewStaffStatistics();
         }
 
         // 更新老员工分页
@@ -1426,10 +1471,10 @@ let staffWithImpact = processedNewStaff.map(staff => {
             // 获取表头（使用第一条数据的键）
             const headers = Object.keys(currentPageData[0]);
             
-            // 定义字段顺序：梯队在前，非第一梯队原因在后
+            // 定义字段顺序：梯队在前，非第一梯队原因在后，排除差异量字段
             const customHeaders = [
                 '梯队', 
-                ...headers.filter(h => !['isFirstTier', 'isSecondTier', 'isThirdTier', 'tier', '未达标项', '差距值', '非第一梯队原因'].includes(h)),
+                ...headers.filter(h => !['isFirstTier', 'isSecondTier', 'isThirdTier', 'tier', '未达标项', '差距值', '非第一梯队原因', '满意度差异量', '解决率差异量'].includes(h)),
                 '非第一梯队原因'
             ];
             
@@ -1474,11 +1519,15 @@ let staffWithImpact = processedNewStaff.map(staff => {
                     
                     // 格式化数值
                     if (typeof displayValue === 'number') {
-                        // 解决率总评价量_剔除R保持数字格式
-                        if (header === '解决率总评价量_剔除R') {
+                        // 整数字段：解决率总评价量_剔除R、接待量、满意量_剔除R、评价量_剔除R、已解决量_剔除R
+                        if (header === '解决率总评价量_剔除R' || 
+                            header === '接待量' || 
+                            header === '满意量_剔除R' || 
+                            header === '评价量_剔除R' || 
+                            header === '已解决量_剔除R') {
                             displayValue = displayValue.toFixed(0);
                         }
-                        // 百分比字段（排除解决率总评价量_剔除R）
+                        // 百分比字段
                         else if (header.includes('满意度') || header.includes('解决率')) {
                             displayValue = (displayValue * 100).toFixed(1) + '%';
                         }
@@ -1496,10 +1545,10 @@ let staffWithImpact = processedNewStaff.map(staff => {
                     if (oldCalculationMethod === 'target' && staff.未达标项) {
                         if (header === '满意度_剔除R' && staff.未达标项.satisfaction) {
                             isHighlighted = true;
-                            displayValue += ` (差距: ${(staff.差距值.satisfaction * 100).toFixed(1)}%)`;
+                            displayValue += ` (差距: ${(staff.差距值.satisfaction * 100).toFixed(1)}%, 差异量: ${staff.满意度差异量})`;
                         } else if (header === '解决率_剔除R' && staff.未达标项.resolution) {
                             isHighlighted = true;
-                            displayValue += ` (差距: ${(staff.差距值.resolution * 100).toFixed(1)}%)`;
+                            displayValue += ` (差距: ${(staff.差距值.resolution * 100).toFixed(1)}%, 差异量: ${staff.解决率差异量})`;
                         } else if (header === '评价量_剔除R' && staff.未达标项.evaluation) {
                             isHighlighted = true;
                             displayValue += ` (差距: ${staff.差距值.evaluation})`;
@@ -1604,11 +1653,15 @@ let staffWithImpact = processedNewStaff.map(staff => {
                         if (header === '满意度影响值') {
                             displayValue = displayValue.toFixed(6);
                         }
-                        // 解决率总评价量_剔除R保持数字格式
-                        else if (header === '解决率总评价量_剔除R') {
+                        // 整数字段：解决率总评价量_剔除R、接待量、满意量_剔除R、评价量_剔除R、已解决量_剔除R
+                        else if (header === '解决率总评价量_剔除R' || 
+                                 header === '接待量' || 
+                                 header === '满意量_剔除R' || 
+                                 header === '评价量_剔除R' || 
+                                 header === '已解决量_剔除R') {
                             displayValue = displayValue.toFixed(0);
                         }
-                        // 百分比字段（排除解决率总评价量_剔除R）
+                        // 百分比字段
                         else if (header.includes('满意度') || header.includes('解决率')) {
                             displayValue = (displayValue * 100).toFixed(1) + '%';
                         }
@@ -1637,20 +1690,24 @@ let staffWithImpact = processedNewStaff.map(staff => {
 
         // 格式化表头
         function formatHeader(header) {
-            switch(header) {
+            // 去除表头中的"_剔除R"文本
+            let formattedHeader = header.replace('_剔除R', '');
+            
+            switch(formattedHeader) {
                 case 'satisfactionScore': return '满意度得分';
                 case 'resolutionScore': return '解决率得分';
                 case 'totalScore': return '总分值';
-                default: return header;
+                default: return formattedHeader;
             }
         }
 
         // 更新老员工统计信息
         function updateOldStaffStatistics() {
-            const firstTierCount = processedOldStaff.filter(s => s.isFirstTier).length;
-            const secondTierCount = processedOldStaff.filter(s => s.isSecondTier).length;
-            const thirdTierCount = processedOldStaff.filter(s => s.isThirdTier).length;
-            const totalCount = processedOldStaff.length;
+            // 使用筛选后的数据进行统计
+            const firstTierCount = oldStaffFiltered.filter(s => s.isFirstTier).length;
+            const secondTierCount = oldStaffFiltered.filter(s => s.isSecondTier).length;
+            const thirdTierCount = oldStaffFiltered.filter(s => s.isThirdTier).length;
+            const totalCount = oldStaffFiltered.length;
             
             document.getElementById('oldFirstTierCount').textContent = firstTierCount;
             document.getElementById('oldSecondTierCount').textContent = secondTierCount;
@@ -1660,10 +1717,11 @@ let staffWithImpact = processedNewStaff.map(staff => {
 
         // 更新新员工统计信息
         function updateNewStaffStatistics() {
-            const firstTierCount = processedNewStaff.filter(s => s.isFirstTier).length;
-            const secondTierCount = processedNewStaff.filter(s => s.isSecondTier).length;
-            const thirdTierCount = processedNewStaff.filter(s => s.isThirdTier).length;
-            const totalCount = processedNewStaff.length;
+            // 使用筛选后的数据进行统计
+            const firstTierCount = newStaffFiltered.filter(s => s.isFirstTier).length;
+            const secondTierCount = newStaffFiltered.filter(s => s.isSecondTier).length;
+            const thirdTierCount = newStaffFiltered.filter(s => s.isThirdTier).length;
+            const totalCount = newStaffFiltered.length;
             
             document.getElementById('newFirstTierCountDisplay').textContent = firstTierCount;
             document.getElementById('newSecondTierCount').textContent = secondTierCount;
@@ -1671,6 +1729,213 @@ let staffWithImpact = processedNewStaff.map(staff => {
             document.getElementById('newTotalCount').textContent = totalCount;
         }
 
+        // 更新部门梯队统计信息
+        function updateDepartmentTierStatistics() {
+            // 收集所有部门
+            const departments = new Set();
+            processedOldStaff.forEach(item => {
+                if (item.五级部门) departments.add(item.五级部门);
+            });
+            processedNewStaff.forEach(item => {
+                if (item.五级部门) departments.add(item.五级部门);
+            });
+            
+            // 转换为数组并排序
+            const departmentArray = Array.from(departments).sort();
+            
+            // 预计算各梯队总计（用于占比计算）
+            let grandTotalAllTier1 = 0, grandTotalAllTier2 = 0, grandTotalAllTier3 = 0;
+            
+            // 先计算总计
+            departmentArray.forEach(dept => {
+                // 老员工统计
+                const oldStaffInDept = processedOldStaff.filter(staff => staff.五级部门 === dept);
+                const oldTier1 = oldStaffInDept.filter(staff => staff.tier === 1).length;
+                const oldTier2 = oldStaffInDept.filter(staff => staff.tier === 2).length;
+                const oldTier3 = oldStaffInDept.filter(staff => staff.tier === 3).length;
+                
+                // 新员工统计
+                const newStaffInDept = processedNewStaff.filter(staff => staff.五级部门 === dept);
+                const newTier1 = newStaffInDept.filter(staff => staff.tier === 1).length;
+                const newTier2 = newStaffInDept.filter(staff => staff.tier === 2).length;
+                const newTier3 = newStaffInDept.filter(staff => staff.tier === 3).length;
+                
+                // 累加总计
+                grandTotalAllTier1 += oldTier1 + newTier1;
+                grandTotalAllTier2 += oldTier2 + newTier2;
+                grandTotalAllTier3 += oldTier3 + newTier3;
+            });
+            
+            // 创建表格HTML
+            let statsHtml = `
+                <table class="w-full border-collapse shadow-md rounded-lg overflow-hidden">
+                <style>
+                    #departmentTierStatistics table {
+                        font-size: 14px;
+                        line-height: 1.5;
+                        border-radius: 8px;
+                        overflow: hidden;
+                    }
+                    #departmentTierStatistics th, #departmentTierStatistics td {
+                        border: 1px solid #e5e7eb;
+                        padding: 10px 12px;
+                        text-align: center;
+                    }
+                    #departmentTierStatistics th {
+                        background: linear-gradient(to right, #f3f4f6, #e5e7eb);
+                        font-weight: 600;
+                        color: #374151;
+                    }
+                    #departmentTierStatistics tr:nth-child(even) {
+                        background-color: #f9fafb;
+                    }
+                    #departmentTierStatistics tr:hover {
+                        background-color: #f3f4f6;
+                    }
+                    #departmentTierStatistics tr:last-child {
+                        background: linear-gradient(to right, #f3f4f6, #e5e7eb);
+                        font-weight: bold;
+                    }
+                    .percentage-bar {
+                        height: 20px;
+                        background: linear-gradient(to right, #fca5a5, #ef4444);
+                        border-radius: 10px;
+                        position: relative;
+                        overflow: hidden;
+                    }
+                    .percentage-text {
+                        position: absolute;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                        color: white;
+                        font-weight: bold;
+                        text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+                    }
+                </style>
+                    <thead>
+                        <tr>
+                            <th class="border p-2 text-left">组别</th>
+                            <th colspan="4" class="border p-2 text-center">第一梯队</th>
+                            <th colspan="4" class="border p-2 text-center">第二梯队</th>
+                            <th colspan="4" class="border p-2 text-center">第三梯队</th>
+                        </tr>
+                        <tr>
+                            <th class="border p-2 text-left"></th>
+                            <th class="border p-2 text-center text-green-600">新人</th>
+                            <th class="border p-2 text-center text-blue-600">老人</th>
+                            <th class="border p-2 text-center font-bold">总计</th>
+                            <th class="border p-2 text-center font-bold">占比</th>
+                            <th class="border p-2 text-center text-green-600">新人</th>
+                            <th class="border p-2 text-center text-blue-600">老人</th>
+                            <th class="border p-2 text-center font-bold">总计</th>
+                            <th class="border p-2 text-center font-bold">占比</th>
+                            <th class="border p-2 text-center text-green-600">新人</th>
+                            <th class="border p-2 text-center text-blue-600">老人</th>
+                            <th class="border p-2 text-center font-bold">总计</th>
+                            <th class="border p-2 text-center font-bold">占比</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            // 计算总计
+            let grandTotalNewTier1 = 0, grandTotalOldTier1 = 0;
+            let grandTotalNewTier2 = 0, grandTotalOldTier2 = 0;
+            let grandTotalNewTier3 = 0, grandTotalOldTier3 = 0;
+            
+            // 添加每个部门的数据行
+            departmentArray.forEach(dept => {
+                // 老员工统计
+                const oldStaffInDept = processedOldStaff.filter(staff => staff.五级部门 === dept);
+                const oldTier1 = oldStaffInDept.filter(staff => staff.tier === 1).length;
+                const oldTier2 = oldStaffInDept.filter(staff => staff.tier === 2).length;
+                const oldTier3 = oldStaffInDept.filter(staff => staff.tier === 3).length;
+                
+                // 新员工统计
+                const newStaffInDept = processedNewStaff.filter(staff => staff.五级部门 === dept);
+                const newTier1 = newStaffInDept.filter(staff => staff.tier === 1).length;
+                const newTier2 = newStaffInDept.filter(staff => staff.tier === 2).length;
+                const newTier3 = newStaffInDept.filter(staff => staff.tier === 3).length;
+                
+                // 计算总计
+                const allTier1 = oldTier1 + newTier1;
+                const allTier2 = oldTier2 + newTier2;
+                const allTier3 = oldTier3 + newTier3;
+                
+                // 计算占比
+                const percentageTier1 = grandTotalAllTier1 > 0 ? ((allTier1 / grandTotalAllTier1) * 100).toFixed(1) : '0.0';
+                const percentageTier2 = grandTotalAllTier2 > 0 ? ((allTier2 / grandTotalAllTier2) * 100).toFixed(1) : '0.0';
+                const percentageTier3 = grandTotalAllTier3 > 0 ? ((allTier3 / grandTotalAllTier3) * 100).toFixed(1) : '0.0';
+                
+                // 累加总计
+                grandTotalNewTier1 += newTier1;
+                grandTotalOldTier1 += oldTier1;
+                grandTotalNewTier2 += newTier2;
+                grandTotalOldTier2 += oldTier2;
+                grandTotalNewTier3 += newTier3;
+                grandTotalOldTier3 += oldTier3;
+                
+                // 添加行
+                statsHtml += `
+                    <tr>
+                        <td class="border p-2 font-medium text-left">${dept}</td>
+                        <td class="border p-2 text-center text-green-600">${newTier1}</td>
+                        <td class="border p-2 text-center text-blue-600">${oldTier1}</td>
+                        <td class="border p-2 text-center font-bold">${allTier1}</td>
+                        <td class="border p-2">
+                            <div class="percentage-bar" style="width: ${Math.min(parseFloat(percentageTier1) * 5, 100)}%">
+                                <div class="percentage-text">${percentageTier1}%</div>
+                            </div>
+                        </td>
+                        <td class="border p-2 text-center text-green-600">${newTier2}</td>
+                        <td class="border p-2 text-center text-blue-600">${oldTier2}</td>
+                        <td class="border p-2 text-center font-bold">${allTier2}</td>
+                        <td class="border p-2">
+                            <div class="percentage-bar" style="width: ${Math.min(parseFloat(percentageTier2) * 5, 100)}%">
+                                <div class="percentage-text">${percentageTier2}%</div>
+                            </div>
+                        </td>
+                        <td class="border p-2 text-center text-green-600">${newTier3}</td>
+                        <td class="border p-2 text-center text-blue-600">${oldTier3}</td>
+                        <td class="border p-2 text-center font-bold">${allTier3}</td>
+                        <td class="border p-2">
+                            <div class="percentage-bar" style="width: ${Math.min(parseFloat(percentageTier3) * 5, 100)}%">
+                                <div class="percentage-text">${percentageTier3}%</div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            // 添加总计行
+            statsHtml += `
+                    <tr>
+                        <td class="border p-2 font-bold text-left">总计</td>
+                        <td class="border p-2 text-center font-bold text-green-600">${grandTotalNewTier1}</td>
+                        <td class="border p-2 text-center font-bold text-blue-600">${grandTotalOldTier1}</td>
+                        <td class="border p-2 text-center font-bold">${grandTotalAllTier1}</td>
+                        <td class="border p-2 text-center font-bold text-red-600">100.0%</td>
+                        <td class="border p-2 text-center font-bold text-green-600">${grandTotalNewTier2}</td>
+                        <td class="border p-2 text-center font-bold text-blue-600">${grandTotalOldTier2}</td>
+                        <td class="border p-2 text-center font-bold">${grandTotalAllTier2}</td>
+                        <td class="border p-2 text-center font-bold text-red-600">100.0%</td>
+                        <td class="border p-2 text-center font-bold text-green-600">${grandTotalNewTier3}</td>
+                        <td class="border p-2 text-center font-bold text-blue-600">${grandTotalOldTier3}</td>
+                        <td class="border p-2 text-center font-bold">${grandTotalAllTier3}</td>
+                        <td class="border p-2 text-center font-bold text-red-600">100.0%</td>
+                    </tr>
+                </tbody>
+            </table>
+            `;
+            
+            // 更新DOM
+            const departmentStatsContainer = document.getElementById('departmentTierStatistics');
+            if (departmentStatsContainer) {
+                departmentStatsContainer.innerHTML = statsHtml || '<p class="text-gray-500">暂无数据</p>';
+            }
+        }
+        
         // 更新总体统计信息
         function updateStatistics() {
             const totalRecords = originalData.length;
@@ -1688,6 +1953,9 @@ let staffWithImpact = processedNewStaff.map(staff => {
             // 更新各员工类型的统计
             updateOldStaffStatistics();
             updateNewStaffStatistics();
+            
+            // 更新部门梯队统计信息
+            updateDepartmentTierStatistics();
         }
 
         // 切换跳转方向
@@ -1735,8 +2003,12 @@ let staffWithImpact = processedNewStaff.map(staff => {
                         else if (key === '解决率总评价量_剔除R') {
                             formattedFields[key] = value.toFixed(0);
                         }
-                        // 百分比字段（排除解决率总评价量_剔除R）
-                        else if (key.includes('满意度') || key.includes('解决率')) {
+                        // 差异量字段保持整数格式
+                        else if (key === '满意度差异量' || key === '解决率差异量') {
+                            formattedFields[key] = value.toFixed(0);
+                        }
+                        // 百分比字段（排除解决率总评价量_剔除R和差异量字段）
+                        else if ((key.includes('满意度') || key.includes('解决率')) && !key.includes('差异量')) {
                             formattedFields[key] = (value * 100).toFixed(1) + '%';
                         }
                         // 分值字段
@@ -1781,45 +2053,104 @@ let staffWithImpact = processedNewStaff.map(staff => {
 
         // 导出为图片
         function exportAsImage(type) {
-            const container = type === 'old' ? oldStaffSection : newStaffSection;
-            const tableContainer = container.querySelector('.overflow-x-auto');
+            // 使用筛选后的数据，确保导出跟随筛选条件
+            const filteredData = type === 'old' ? oldStaffFiltered : newStaffFiltered;
             
-            if (!tableContainer) {
-                alert(`没有可导出的${type === 'old' ? '老员工' : '新员工'}表格数据`);
+            if (filteredData.length === 0) {
+                alert(`没有可导出的${type === 'old' ? '老员工' : '新员工'}数据`);
                 return;
             }
             
-            // 克隆整个表格区域用于导出（包含所有数据样式）
-            const clone = container.cloneNode(true);
-            // 移除分页控件，只保留表格
-            const paginationElements = clone.querySelectorAll('#oldPagination, #oldPageNumbers, #newPagination, #newPageNumbers');
+            const container = type === 'old' ? oldStaffSection : newStaffSection;
+            const resultSection = container.querySelector('.p-6:last-child'); // 处理结果部分
+            
+            if (!resultSection) {
+                alert(`没有可导出的${type === 'old' ? '老员工' : '新员工'}处理结果`);
+                return;
+            }
+            
+            // 创建一个新的容器，只包含处理结果部分
+            const exportContainer = document.createElement('div');
+            exportContainer.className = 'bg-white rounded-xl shadow-lg overflow-hidden';
+            
+            // 添加标题
+            const titleDiv = document.createElement('div');
+            titleDiv.className = 'p-4 border-b border-gray-100';
+            titleDiv.innerHTML = `<h3 class="font-medium">${type === 'old' ? '老员工' : '新员工'}处理结果</h3>`;
+            exportContainer.appendChild(titleDiv);
+            
+            // 克隆处理结果部分
+            const resultClone = resultSection.cloneNode(true);
+            
+            // 移除分页控件
+            const paginationElements = resultClone.querySelectorAll('#oldPagination, #oldPageNumbers, #newPagination, #newPageNumbers, #oldPrevPage, #oldNextPage, #newPrevPage, #newNextPage, #oldPageNumbersBottom, #newPageNumbersBottom, #oldPrevPageBottom, #oldNextPageBottom');
             paginationElements.forEach(el => el.remove());
             
-            imageExportContainer.innerHTML = '';
-            imageExportContainer.appendChild(clone);
+            // 移除底部的分页文字信息
+            const paginationTexts = resultClone.querySelectorAll('.text-sm.text-gray-500');
+            paginationTexts.forEach(el => el.remove());
             
-            // 确保克隆的表格可见以便截图
-            imageExportContainer.classList.remove('hidden');
+            // 移除底部的分页容器
+            const paginationContainers = resultClone.querySelectorAll('.mt-4.flex, .mb-4.flex');
+            paginationContainers.forEach(el => {
+                // 检查是否包含分页按钮或页码
+                const hasPagination = el.querySelector('.pagination-btn, #oldPageNumbers, #newPageNumbers') !== null;
+                if (hasPagination) {
+                    el.remove();
+                }
+            });
+            
+            exportContainer.appendChild(resultClone);
+            
+            // 清空并添加到临时容器
+            imageExportContainer.innerHTML = '';
+            imageExportContainer.appendChild(exportContainer);
+            
+            // 保存当前样式，然后为截图设置合适的样式
+            const originalStyles = imageExportContainer.className;
+            
+            // 设置适合截图的样式 - 确保内容可见且能被正确渲染
+            imageExportContainer.className = 'position: static; opacity: 1; z-index: 1; width: auto; height: auto; background-color: white;';
+            
+            // 强制可见性，确保内容完全加载
+            imageExportContainer.style.visibility = 'visible';
+            imageExportContainer.style.position = 'static';
+            imageExportContainer.style.opacity = '1';
+            imageExportContainer.style.zIndex = '1';
+            imageExportContainer.style.width = 'auto';
+            imageExportContainer.style.height = 'auto';
+            imageExportContainer.style.backgroundColor = 'white';
+            imageExportContainer.style.margin = '0';
+            imageExportContainer.style.padding = '0';
+            imageExportContainer.style.border = 'none';
             
             // 延迟截图以确保DOM已更新
             setTimeout(() => {
-                html2canvas(imageExportContainer, {
+                // 直接对导出容器进行截图，而不是整个imageExportContainer
+                html2canvas(exportContainer, {
                     scale: 2, // 提高分辨率
                     useCORS: true,
-                    logging: false
+                    logging: false,
+                    backgroundColor: '#ffffff', // 使用白色背景而不是透明
+                    allowTaint: true,
+                    useTransform: true,
+                    removeContainer: false
                 }).then(canvas => {
                     // 创建下载链接
                     const link = document.createElement('a');
-                    link.download = `${type === 'old' ? '老员工' : '新员工'}数据表格_${new Date().toLocaleDateString()}.png`;
+                    link.download = `${type === 'old' ? '老员工' : '新员工'}筛选结果表格_${new Date().toLocaleDateString()}.png`;
                     link.href = canvas.toDataURL('image/png');
                     link.click();
                     
-                    // 隐藏临时容器
-                    imageExportContainer.classList.add('hidden');
+                    // 恢复原始样式
+                    imageExportContainer.className = originalStyles;
+                    imageExportContainer.style = '';
                 }).catch(error => {
                     console.error('导出图片失败:', error);
                     alert('导出图片失败: ' + error.message);
-                    imageExportContainer.classList.add('hidden');
+                    // 确保恢复原始样式
+                    imageExportContainer.className = originalStyles;
+                    imageExportContainer.style = '';
                 });
             }, 300);
         }
@@ -1876,7 +2207,16 @@ let staffWithImpact = processedNewStaff.map(staff => {
         }
 
         // 初始化
-        document.addEventListener('DOMContentLoaded', initEventListeners);
+        console.log('页面加载中...');
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM内容加载完成，准备初始化事件监听器');
+            try {
+                initEventListeners();
+                console.log('事件监听器初始化完成');
+            } catch (error) {
+                console.error('初始化事件监听器时出错:', error);
+            }
+        });
     </script>
 </body>
 </html>
